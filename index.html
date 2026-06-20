@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Education - Preparation Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f0f9ff; /* Sky 50 */
+            scroll-behavior: smooth; 
+        }
+        
+        /* Custom Colors for Validation */
+        .correct-answer { background-color: #f0fdf4 !important; border-color: #22c55e !important; color: #166534 !important;}
+        .wrong-answer { background-color: #fef2f2 !important; border-color: #ef4444 !important; color: #991b1b !important;}
+        
+        /* Custom Radio selected state */
+        input[type="radio"]:checked + label { border-color: #0ea5e9; background-color: #e0f2fe; } /* Sky 500 & 100 */
+        
+        /* Feedback Editor Styles */
+        .feedback-editor {
+            min-height: 100px;
+            border: 2px dashed #bae6fd; /* Sky 200 */
+            padding: 1rem;
+            border-radius: 0.75rem;
+            background-color: #ffffff;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .feedback-editor:focus { border-color: #0ea5e9; border-style: solid; box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1); }
+        .toolbar button { transition: all 0.2s; }
+        .toolbar button:hover { background-color: #e0f2fe; }
+
+        /* Highlight animation when jumping to question */
+        .highlight-focus { animation: flash 1.5s ease-out; }
+        @keyframes flash {
+            0% { box-shadow: 0 0 0 4px #7dd3fc; } /* Sky 300 */
+            100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); }
+        }
+        
+        /* Scrollbar aesthetics */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #bae6fd; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #7dd3fc; }
+    </style>
+</head>
+<body class="text-gray-800 antialiased pb-32">
+
+    <!-- Tooltip hiển thị Lời phê (Floating Note) -->
+    <div id="floating-note-tooltip" class="hidden absolute z-[100] bg-white rounded-xl shadow-xl border border-sky-200 p-4 max-w-sm transition-opacity duration-200 pointer-events-auto filter drop-shadow-lg">
+        <div class="flex items-center space-x-2 mb-2 border-b border-sky-100 pb-2">
+            <i class="fas fa-comment-dots text-sky-500 text-lg"></i>
+            <span class="text-sm font-bold text-sky-800">Giáo viên ghi chú</span>
+        </div>
+        <p id="floating-note-content" class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"></p>
+        <div id="tooltip-arrow" class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-sky-200 rotate-45"></div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Header & Name Input -->
+        <div class="bg-white rounded-2xl shadow-sm border border-sky-100 p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6" id="top-header">
+            <div class="flex items-center space-x-4">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-sky-50 text-sky-500 shadow-inner border border-sky-100">
+                    <i class="fas fa-graduation-cap text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Education - Preparation Quiz</h1>
+                    <p class="text-gray-500 text-sm mt-1">Chuẩn bị kiến thức chủ đề Education. Điền tên của bạn trước khi nộp bài!</p>
+                </div>
+            </div>
+            <div class="w-full md:w-auto">
+                <input type="text" id="student-name" placeholder="Nhập Họ và Tên của bạn..." class="w-full md:w-72 px-4 py-2 border border-sky-200 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none font-semibold text-sky-900 bg-sky-50/50 placeholder-sky-400 shadow-sm transition-shadow">
+            </div>
+        </div>
+
+        <!-- Teacher Header (Hidden by Default) -->
+        <div id="teacher-header" class="hidden bg-white rounded-2xl shadow-sm border-t-4 border-t-sky-500 border-x border-b border-sky-100 p-8 mb-8 text-center">
+            <p class="text-sm font-semibold text-sky-600 uppercase tracking-wider mb-1">Bài làm của học sinh</p>
+            <h1 id="teacher-display-name" class="text-3xl font-bold text-gray-900 mb-6"></h1>
+            
+            <div id="teacher-instruction" class="bg-amber-50 text-amber-800 p-4 rounded-xl text-left text-sm border border-amber-200 inline-block max-w-3xl mx-auto">
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-chalkboard-teacher text-xl mt-0.5 text-amber-600"></i>
+                    <div>
+                        <strong class="block text-base mb-1">CHẾ ĐỘ GIÁO VIÊN CHẤM BÀI</strong>
+                        Hệ thống đã khóa các câu trắc nghiệm. Ở <span class="font-semibold">Phần 3 (Bài viết)</span>, giáo viên có thể bôi đen chữ của học sinh và dùng thanh công cụ phía trên để <span class="text-red-600 font-medium">sửa lỗi chữ đỏ</span>, <span class="bg-yellow-200 px-1 rounded text-yellow-800">highlight</span> hoặc <span class="text-sky-700 font-medium"><i class="fas fa-comment-dots"></i> thêm ghi chú popup</span>.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quiz Main Container -->
+        <div id="quiz-container" class="space-y-8">
+            
+            <!-- PART 1 -->
+            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-2 h-full bg-sky-400"></div>
+                <div class="flex items-center space-x-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="w-10 h-10 rounded-full bg-sky-50 flex items-center justify-center text-sky-600"><i class="fas fa-book-open"></i></div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Phần 1: Từ vựng & Khái niệm</h2>
+                        <p class="text-sm text-gray-500">10 Câu - Trắc nghiệm tổng hợp</p>
+                    </div>
+                </div>
+                <div id="part1-container" class="space-y-6"></div>
+            </section>
+
+            <!-- PART 2A -->
+            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-2 h-full bg-emerald-400"></div>
+                <div class="flex items-center space-x-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><i class="fas fa-thumbs-up"></i></div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Phần 2.1: Nhận diện Advantage</h2>
+                        <p class="text-sm text-gray-500">10 Câu - Xác định ý tưởng thuộc ưu điểm của loại hình nào</p>
+                    </div>
+                </div>
+                <div id="part2a-container" class="space-y-6"></div>
+            </section>
+
+            <!-- PART 2B -->
+            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-2 h-full bg-rose-400"></div>
+                <div class="flex items-center space-x-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center text-rose-600"><i class="fas fa-thumbs-down"></i></div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Phần 2.2: Nhận diện Disadvantage</h2>
+                        <p class="text-sm text-gray-500">10 Câu - Xác định ý tưởng thuộc nhược điểm của loại hình nào</p>
+                    </div>
+                </div>
+                <div id="part2b-container" class="space-y-6"></div>
+            </section>
+
+            <!-- PART 3 -->
+            <section class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-2 h-full bg-indigo-400"></div>
+                <div class="flex items-center space-x-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600"><i class="fas fa-pen-nib"></i></div>
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Phần 3: Phát triển ý tưởng</h2>
+                        <p class="text-sm text-gray-500">5 Câu - Viết các câu tiếng Anh hoàn chỉnh nối tiếp nhau dựa trên gợi ý (reasons / impacts)</p>
+                    </div>
+                </div>
+                <div id="part3-container" class="space-y-8"></div>
+            </section>
+
+            <!-- Action Buttons -->
+            <div id="submit-area" class="pt-6 text-center">
+                <button type="button" onclick="generateShareLink()" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-4 px-10 rounded-xl shadow-md transition-all duration-200 transform hover:-translate-y-0.5 text-lg flex items-center justify-center mx-auto space-x-2">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Nộp bài & Lấy Link Gửi Giáo Viên</span>
+                </button>
+            </div>
+            
+            <div id="teacher-submit-area" class="hidden pt-6 text-center">
+                <button type="button" onclick="generateTeacherShareLink()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 px-10 rounded-xl shadow-md transition-all duration-200 transform hover:-translate-y-0.5 text-lg flex items-center justify-center mx-auto space-x-2">
+                    <i class="fas fa-check-double"></i>
+                    <span>Hoàn tất chấm & Trả bài</span>
+                </button>
+            </div>
+
+            <!-- Result & Link Banner -->
+            <div id="result-section" class="hidden bg-sky-50 rounded-xl border border-sky-200 p-6 text-center shadow-inner mt-8">
+                <h2 id="result-title" class="text-2xl font-bold mb-2 text-sky-900">Đã lưu bài làm!</h2>
+                <div id="score-container" class="text-gray-700 mb-4 bg-white inline-block px-4 py-2 rounded-lg border border-sky-100 shadow-sm">
+                    Điểm trắc nghiệm tự động: <span id="score-display" class="font-bold text-xl text-sky-600 ml-1"></span>
+                </div>
+                <p id="result-message" class="text-sm text-gray-600 mb-4 max-w-lg mx-auto">Copy đường link dưới đây và gửi cho giáo viên để chấm phần Tự luận:</p>
+                <div class="flex items-center justify-center space-x-2 max-w-xl mx-auto">
+                    <input type="text" id="share-link-input" readonly class="w-full p-3 border border-sky-300 rounded-lg text-sm bg-white focus:outline-none focus:border-sky-500 font-mono text-gray-600" onclick="this.select()">
+                    <button type="button" onclick="copyLink()" class="bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-lg shadow transition font-semibold whitespace-nowrap">Copy Link</button>
+                </div>
+                <p id="copy-status" class="text-emerald-600 text-sm mt-3 font-semibold hidden"><i class="fas fa-check-circle mr-1"></i> Đã copy thành công!</p>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Fixed Bottom Navigation Bar -->
+    <div id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-sky-100 shadow-[0_-10px_30px_-10px_rgba(0,0,0,0.1)] p-3 z-50 transition-transform duration-300">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-bold text-gray-700">Đã làm: <span id="progress-text" class="text-sky-600 font-extrabold bg-sky-50 px-2 py-0.5 rounded border border-sky-100">0/35</span></span>
+                <span class="text-xs text-gray-500 italic hidden sm:inline-block">Click vào ô số để nhảy đến câu hỏi</span>
+            </div>
+            <div id="nav-grid" class="flex flex-wrap gap-1.5 justify-start sm:justify-center max-h-32 overflow-y-auto pr-2 pb-1">
+                <!-- Nav buttons injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA STRUCTURES ---
+        const dataPart1 = [
+            { q: "1. Đáp án nào chứa tất cả đều là ADVANTAGE của Online courses (E-learning) ở góc độ cá nhân?", opts: ["Affordable, Convenience, Flexibility, Accessible", "Economic growth, Export education, Wider access", "Physical interaction, Immediate feedback, Structured learning", "High tuition fees, Student debt, Brain drain"], ans: 0 },
+            { q: "2. Đáp án nào chứa tất cả đều là ADVANTAGE của Online courses ở góc độ vĩ mô / chính phủ?", opts: ["Limited direct interaction, Technology dependence", "Contribute to economic growth, Generate extra income, Wider access, Lower illiteracy rate", "High maintenance cost, Geographical barrier", "Provide high-quality labour resource, Cost less than Academic training"], ans: 1 },
+            { q: "3. Đáp án nào chứa tất cả đều là DISADVANTAGE của Online courses ở góc độ cá nhân?", opts: ["Cybersecurity risks, Quality assurance challenge", "Skills outdated, Lower earning potential", "Limited direct interaction, Technology dependence, Limited teacher observation, Require self-discipline", "Less flexible, Strict schedule, Require travel cost"], ans: 2 },
+            { q: "4. Đáp án nào chứa các DISADVANTAGE của Online courses đối với chính phủ/nhà trường?", opts: ["High tuition fees, Limited hands-on experience", "Cybersecurity and privacy risks, Quality assurance challenge", "High expenditure on infrastructure, Brain drain", "Limited capacity, High maintenance cost"], ans: 1 },
+            { q: "5. Danh sách nào nêu đúng các ADVANTAGE của Traditional classroom ở góc độ cá nhân?", opts: ["Provide practical skill, Easy to get a job", "Physical interaction, Immediate feedback, Structured learning environment, Promote discipline", "Affordable, Accessible anywhere", "Help student development (critical thinking), Higher earning potential"], ans: 1 },
+            { q: "6. Điểm yếu (DISADVANTAGE) của Traditional classroom ở khía cạnh vĩ mô bao gồm:", opts: ["High maintenance cost for facilities, Limited capacity, Geographical barrier", "Cybersecurity risks, Quality assurance challenge", "Student debt, Brain drain", "Require travel cost, Strict schedule"], ans: 0 },
+            { q: "7. Những cụm từ nào thể hiện ADVANTAGE của Academic education ở góc độ cá nhân?", opts: ["Provide practical skill, Hands-on training, Reduce unemployment", "Standardized curriculum, Easy to follow and be monitored", "Help student development (critical thinking, research), Better job opportunity, Higher earning potential", "More affordable, Offer flexibility"], ans: 2 },
+            { q: "8. Lợi ích vĩ mô của Academic education là gì?", opts: ["Encourage research and technological development, Create highly educated workforces, Promote national economic growth", "Export education, Reach international students", "Cost less than other training, Meet demand for manual workers", "Structured learning environment, Promote concentration"], ans: 0 },
+            { q: "9. Đâu là cụm từ chỉ DISADVANTAGE của Academic education ở góc độ vĩ mô?", opts: ["Student debt, High tuition fees, Financial pressure", "Skills can easily be outdated, Fewer options to switch career", "High expenditure on university, Brain drain (students emigrate)", "Technology dependence, Limited teacher observation"], ans: 2 },
+            { q: "10. Danh sách nào liệt kê các DISADVANTAGE của Vocational Education ở góc độ cá nhân?", opts: ["Limited capacity, High maintenance cost", "Skills can easily be outdated, Lower earning potential than academic career, Fewer options to switch career", "High tuition fees, Limited hands-on experience", "Less flexible, Require travel cost"], ans: 1 }
+        ];
+
+        const eduTypes = ["Online courses / E-learning", "Traditional / Physical classroom", "Academic education", "Vocational Education"];
+        const dataPart2a = [
+            { q: "11. More affordable: Reduce the cost of transportation, educators don't have to bear certain operation costs.", ans: 0 },
+            { q: "12. Contribute to economic growth: Export education..., reaching international students -> generate extra income.", ans: 0 },
+            { q: "13. Immediate feedback and support: Teachers can monitor students closely.", ans: 1 },
+            { q: "14. Standardized curriculum: Government approved -> applied across all schools -> easy to follow and be monitored.", ans: 1 },
+            { q: "15. Help student development (critical thinking, research, analytical skills)", ans: 2 },
+            { q: "16. Create highly educated workforces -> contribute to the labour market -> promote national economic growth.", ans: 2 },
+            { q: "17. Provide practical skill and hands-on training -> easy to get a job = provide employment readiness.", ans: 3 },
+            { q: "18. Provide high-quality labour resource -> Meet the industry and the market labour demand for manual workers.", ans: 3 },
+            { q: "19. Cost less than Academic training -> with the same investment, can train more students.", ans: 3 },
+            { q: "20. Wider access to education: Bringing education to rural and remote areas -> lower illiteracy rate economically.", ans: 0 }
+        ];
+
+        const dataPart2b = [
+            { q: "21. Technology dependence: internet connection, device problems.", ans: 0 },
+            { q: "22. Cybersecurity and privacy risks involving student data.", ans: 0 },
+            { q: "23. Less flexible = Strict schedule / Require travel and transportation cost.", ans: 1 },
+            { q: "24. High maintenance cost for building and facilities / Limited capacity because of classroom size.", ans: 1 },
+            { q: "25. High tuition fees -> student have to borrow money from bank -> may create financial pressure.", ans: 2 },
+            { q: "26. High expenditure on university / Brain drain (when highly educated students emigrate to other country).", ans: 2 },
+            { q: "27. Skills can easily be outdated when technology changes.", ans: 3 },
+            { q: "28. Career may have a lower earning potential than academic career / Fewer options to switch career.", ans: 3 },
+            { q: "29. Quality assurance challenge in maintaining educational standards.", ans: 0 },
+            { q: "30. Limited teacher observation: Teacher cannot fully monitor students -> students may get distracted.", ans: 0 }
+        ];
+
+        const dataPart3 = [
+            { q: "31. Advantage của Traditional Classroom: Standardized curriculum.", hint: "Chương trình học được chính phủ phê duyệt (Government approved) => được áp dụng đồng bộ ở tất cả các trường (applied across all schools) => chính quyền dễ dàng theo dõi và quản lý (easy to follow and be monitored by the authority)." },
+            { q: "32. Disadvantage của Traditional Classroom: Limited capacity.", hint: "Sức chứa của lớp học truyền thống bị giới hạn (classroom size) và nguồn lực có sẵn ít (available resource) => Khó tiếp cận số lượng học sinh lớn / Rào cản địa lý (Geographical barrier)." },
+            { q: "33. Disadvantage của Academic Education: Financial pressure.", hint: "Học phí cao (High tuition fees) => học sinh phải vay tiền ngân hàng (borrow money from bank) => dẫn đến nợ nần sinh viên (student debt) / tạo ra áp lực tài chính (create financial pressure)." },
+            { q: "34. Advantage của Vocational Education: Employment readiness.", hint: "Cung cấp kỹ năng thực tế (Provide practical skill and hands-on training) => dễ dàng kiếm việc làm (easy to get a job) / sẵn sàng làm việc (employment readiness) => giảm tỷ lệ thất nghiệp sau khi tốt nghiệp (reduce unemployment rate after graduation)." },
+            { q: "35. Disadvantage của E-learning: Limited teacher observation.", hint: "Giáo viên không thể giám sát học sinh một cách toàn diện (cannot fully monitor students) => học sinh dễ bị xao nhãng (students may get distracted) / đòi hỏi học sinh phải có tính tự giác cao (Require strong self-discipline)." }
+        ];
+
+        let answeredSet = new Set();
+
+        // --- STREAMING_CHUNK:Rendering DOM Elements... ---
+        function renderOptions(namePrefix, options, type) {
+            let html = '';
+            options.forEach((opt, idx) => {
+                html += `
+                    <div class="relative mb-2">
+                        <input type="radio" id="${namePrefix}_opt${idx}" name="${namePrefix}" value="${idx}" class="hidden peer">
+                        <label for="${namePrefix}_opt${idx}" class="block p-3 border border-sky-200 rounded-xl cursor-pointer transition-all duration-200 hover:bg-sky-50 peer-checked:border-sky-500 peer-checked:bg-sky-100 peer-checked:shadow-sm text-gray-700 text-sm leading-relaxed" id="label_${namePrefix}_opt${idx}">
+                            <div class="flex items-start">
+                                <div class="w-5 h-5 rounded-full border border-sky-300 mr-3 mt-0.5 flex-shrink-0 peer-checked:bg-sky-500 peer-checked:border-sky-500 flex items-center justify-center transition-colors">
+                                    <div class="w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100"></div>
+                                </div>
+                                <span>${type === 'mc' ? String.fromCharCode(65 + idx) + '. ' : ''}${opt}</span>
+                            </div>
+                        </label>
+                    </div>
+                `;
+            });
+            return html;
+        }
+
+        function initQuiz() {
+            // Render Part 1
+            const p1Container = document.getElementById('part1-container');
+            dataPart1.forEach((item, index) => {
+                p1Container.innerHTML += `
+                    <div class="q-block pb-6 border-b border-gray-100 last:border-0 transition-colors" id="qblock_p1_${index}">
+                        <p class="font-medium text-sky-900 mb-3 leading-snug">${item.q}</p>
+                        <div class="pl-2 border-l-2 border-sky-100 space-y-1">
+                            ${renderOptions(`p1_q${index}`, item.opts, 'mc')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Part 2a
+            const p2aContainer = document.getElementById('part2a-container');
+            dataPart2a.forEach((item, index) => {
+                p2aContainer.innerHTML += `
+                    <div class="q-block pb-6 border-b border-gray-100 last:border-0 transition-colors" id="qblock_p2a_${index}">
+                        <p class="font-medium text-emerald-900 mb-3 bg-emerald-50 p-3 rounded-lg border border-emerald-100 leading-snug">${item.q}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            ${renderOptions(`p2a_q${index}`, eduTypes, 'match')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Part 2b
+            const p2bContainer = document.getElementById('part2b-container');
+            dataPart2b.forEach((item, index) => {
+                p2bContainer.innerHTML += `
+                    <div class="q-block pb-6 border-b border-gray-100 last:border-0 transition-colors" id="qblock_p2b_${index}">
+                        <p class="font-medium text-rose-900 mb-3 bg-rose-50 p-3 rounded-lg border border-rose-100 leading-snug">${item.q}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            ${renderOptions(`p2b_q${index}`, eduTypes, 'match')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            // Render Part 3
+            const p3Container = document.getElementById('part3-container');
+            dataPart3.forEach((item, index) => {
+                p3Container.innerHTML += `
+                    <div class="q-block pb-8 border-b border-gray-100 last:border-0 transition-colors" id="qblock_p3_${index}">
+                        <p class="font-bold text-indigo-900 mb-2 flex items-start gap-2">
+                            <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-sm">${index + 31}</span>
+                            ${item.q.replace(/^\d+\.\s*/, '')}
+                        </p>
+                        <p class="text-sm text-gray-600 mb-3 ml-8 italic border-l-2 border-indigo-200 pl-3 py-1 bg-indigo-50/30">Gợi ý: ${item.hint}</p>
+                        
+                        <div id="toolbar_p3_${index}" class="hidden toolbar mb-2 ml-8 bg-sky-50 border border-sky-200 rounded-lg p-1.5 flex items-center space-x-1 shadow-sm w-fit">
+                            <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:text-sky-600 hover:bg-sky-100" title="In đậm"><i class="fas fa-bold"></i></button>
+                            <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:text-sky-600 hover:bg-sky-100" title="Gạch ngang"><i class="fas fa-strikethrough"></i></button>
+                            <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-500 hover:bg-red-50" title="Chữ đỏ"><i class="fas fa-palette"></i></button>
+                            <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-500 hover:bg-yellow-50" title="Highlight Vàng"><i class="fas fa-highlighter"></i></button>
+                            <div class="w-px h-5 bg-sky-200 mx-1"></div>
+                            <button type="button" onclick="addTeacherNote()" class="px-3 h-8 rounded flex items-center justify-center text-sky-600 text-sm font-semibold hover:bg-sky-100" title="Thêm Ghi Chú"><i class="fas fa-comment-medical mr-1.5"></i> Note</button>
+                        </div>
+                        
+                        <div class="ml-8 relative">
+                            <div id="editor_p3_${index}" class="feedback-editor w-full text-gray-800 text-sm shadow-sm" contenteditable="false" placeholder="Viết câu trả lời của bạn vào đây..."></div>
+                            <textarea id="hidden_p3_${index}" class="hidden"></textarea>
+                        </div>
+                    </div>
+                `;
+            });
+
+            buildBottomNav();
+            attachTrackingListeners();
+            checkUrlParams();
+            
+            // Add custom style for radio inputs inner dots dynamically
+            const style = document.createElement('style');
+            style.innerHTML = `
+                input[type="radio"]:checked + label div.w-5 > div { opacity: 1 !important; }
+                input[type="radio"]:checked + label div.w-5 { background-color: #0ea5e9 !important; border-color: #0ea5e9 !important; }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // --- STREAMING_CHUNK:Navigation Bar logic... ---
+        function buildBottomNav() {
+            const navGrid = document.getElementById('nav-grid');
+            for (let i = 1; i <= 35; i++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = `nav-btn-${i}`;
+                btn.className = 'w-8 h-8 sm:w-10 sm:h-10 text-xs sm:text-sm rounded-lg border border-sky-200 font-semibold text-sky-700 bg-white hover:bg-sky-50 transition-all shadow-sm flex-shrink-0 flex items-center justify-center';
+                btn.innerText = i;
+                btn.onclick = () => scrollToQuestion(i);
+                navGrid.appendChild(btn);
+            }
+        }
+
+        function updateNavBoxState(qNum, isAnswered) {
+            const btn = document.getElementById(`nav-btn-${qNum}`);
+            if (!btn) return;
+
+            if (isAnswered) {
+                if (!answeredSet.has(qNum)) {
+                    answeredSet.add(qNum);
+                    btn.classList.remove('bg-white', 'text-sky-700', 'border-sky-200', 'hover:bg-sky-50');
+                    btn.classList.add('bg-sky-500', 'text-white', 'border-sky-600', 'hover:bg-sky-600', 'shadow-md');
+                }
+            } else {
+                if (answeredSet.has(qNum)) {
+                    answeredSet.delete(qNum);
+                    btn.classList.remove('bg-sky-500', 'text-white', 'border-sky-600', 'hover:bg-sky-600', 'shadow-md');
+                    btn.classList.add('bg-white', 'text-sky-700', 'border-sky-200', 'hover:bg-sky-50');
+                }
+            }
+            document.getElementById('progress-text').innerText = `${answeredSet.size}/35`;
+        }
+
+        function scrollToQuestion(qNum) {
+            let targetId = '';
+            if (qNum <= 10) targetId = `qblock_p1_${qNum - 1}`;
+            else if (qNum <= 20) targetId = `qblock_p2a_${qNum - 11}`;
+            else if (qNum <= 30) targetId = `qblock_p2b_${qNum - 21}`;
+            else targetId = `qblock_p3_${qNum - 31}`;
+            
+            const el = document.getElementById(targetId);
+            if (el) {
+                const y = el.getBoundingClientRect().top + window.scrollY - 100;
+                window.scrollTo({top: y, behavior: 'smooth'});
+                
+                el.classList.add('highlight-focus', 'rounded-xl', 'px-2');
+                setTimeout(() => {
+                    el.classList.remove('highlight-focus', 'px-2');
+                }, 1500);
+            }
+        }
+
+        function attachTrackingListeners() {
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const name = e.target.name;
+                    let qNum;
+                    if (name.startsWith('p1_')) qNum = parseInt(name.split('_q')[1]) + 1;
+                    else if (name.startsWith('p2a_')) qNum = parseInt(name.split('_q')[1]) + 11;
+                    else if (name.startsWith('p2b_')) qNum = parseInt(name.split('_q')[1]) + 21;
+                    updateNavBoxState(qNum, true);
+                });
+            });
+
+            document.querySelectorAll('.feedback-editor').forEach((editor, idx) => {
+                editor.addEventListener('input', function() {
+                    const qNum = idx + 31;
+                    document.getElementById(`hidden_p3_${idx}`).value = this.innerHTML;
+                    const textContent = this.textContent.trim();
+                    updateNavBoxState(qNum, textContent !== '');
+                });
+            });
+        }
+
+        // --- STREAMING_CHUNK:Form Submission logic... ---
+        function generateShareLink() {
+            const studentNameInput = document.getElementById('student-name');
+            const studentName = studentNameInput.value.trim();
+            if (!studentName) {
+                studentNameInput.classList.add('ring-2', 'ring-red-400', 'border-red-400');
+                setTimeout(() => studentNameInput.classList.remove('ring-2', 'ring-red-400', 'border-red-400'), 2000);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                // Thay vì dùng alert, đổi màu viền để nhắc khéo
+                const placeholder = studentNameInput.placeholder;
+                studentNameInput.placeholder = "⚠️ Vui lòng điền tên trước khi nộp!";
+                setTimeout(() => studentNameInput.placeholder = placeholder, 3000);
+                return;
+            }
+
+            if(answeredSet.size < 35) {
+                const proceed = confirm(`Bạn mới làm được ${answeredSet.size}/35 câu. Nộp bài ngay?`);
+                if(!proceed) return;
+            }
+
+            let p1 = [], p2a = [], p2b = [], p3 = [];
+            dataPart1.forEach((_, i) => p1.push(parseInt(document.querySelector(`input[name="p1_q${i}"]:checked`)?.value ?? -1)));
+            dataPart2a.forEach((_, i) => p2a.push(parseInt(document.querySelector(`input[name="p2a_q${i}"]:checked`)?.value ?? -1)));
+            dataPart2b.forEach((_, i) => p2b.push(parseInt(document.querySelector(`input[name="p2b_q${i}"]:checked`)?.value ?? -1)));
+            dataPart3.forEach((_, i) => p3.push(document.getElementById(`editor_p3_${i}`).innerHTML));
+
+            const payload = { name: studentName, p1, p2a, p2b, p3 };
+            const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+            
+            const url = new URL(window.location.href);
+            url.searchParams.set('mode', 'feedback');
+            url.searchParams.set('data', encoded);
+            
+            document.getElementById('share-link-input').value = url.toString();
+            
+            let score = 0;
+            p1.forEach((ans, i) => { if(ans === dataPart1[i].ans) score++; });
+            p2a.forEach((ans, i) => { if(ans === dataPart2a[i].ans) score++; });
+            p2b.forEach((ans, i) => { if(ans === dataPart2b[i].ans) score++; });
+            document.getElementById('score-display').innerText = `${score} / 30`;
+
+            document.getElementById('result-section').classList.remove('hidden');
+            document.getElementById('result-title').innerText = "Đã lưu bài làm!";
+            document.getElementById('score-container').classList.remove('hidden');
+            document.getElementById('result-message').innerText = "Copy đường link dưới đây và gửi cho giáo viên để chấm phần Tự luận:";
+
+            document.getElementById('bottom-nav').classList.add('translate-y-full');
+            document.getElementById('submit-area').classList.add('hidden');
+            document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function generateTeacherShareLink() {
+            let p1 = [], p2a = [], p2b = [], p3 = [];
+            dataPart1.forEach((_, i) => p1.push(document.querySelector(`input[name="p1_q${i}"]:checked`)?.value || -1));
+            dataPart2a.forEach((_, i) => p2a.push(document.querySelector(`input[name="p2a_q${i}"]:checked`)?.value || -1));
+            dataPart2b.forEach((_, i) => p2b.push(document.querySelector(`input[name="p2b_q${i}"]:checked`)?.value || -1));
+            dataPart3.forEach((_, i) => p3.push(document.getElementById(`editor_p3_${i}`).innerHTML));
+
+            const payload = { 
+                name: document.getElementById('teacher-display-name').innerText,
+                p1: p1.map(Number), p2a: p2a.map(Number), p2b: p2b.map(Number), p3 
+            };
+            
+            const encoded = btoa(encodeURIComponent(JSON.stringify(payload)));
+            const url = new URL(window.location.href);
+            url.searchParams.set('mode', 'view_feedback');
+            url.searchParams.set('data', encoded);
+            
+            document.getElementById('share-link-input').value = url.toString();
+            document.getElementById('result-section').classList.remove('hidden');
+            
+            document.getElementById('result-title').innerText = "Đã hoàn tất chấm điểm!";
+            document.getElementById('score-container').classList.add('hidden');
+            document.getElementById('result-message').innerText = "Gửi đường link này lại cho học sinh để các em xem lời phê chi tiết:";
+            
+            document.getElementById('teacher-submit-area').classList.add('hidden');
+            document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function copyLink() {
+            const input = document.getElementById('share-link-input');
+            input.select();
+            document.execCommand('copy');
+            const status = document.getElementById('copy-status');
+            status.classList.remove('hidden');
+            setTimeout(() => { status.classList.add('hidden'); }, 3000);
+        }
+
+        // --- STREAMING_CHUNK:URL Params & Viewing Mode logic... ---
+        function checkUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            const mode = params.get('mode');
+            const dataStr = params.get('data');
+
+            if(mode !== 'feedback' && mode !== 'view_feedback') {
+                document.querySelectorAll('.feedback-editor').forEach(el => el.setAttribute('contenteditable', 'true'));
+                return; // Normal student mode
+            }
+
+            const topHeader = document.getElementById('top-header');
+            if (topHeader) topHeader.style.display = 'none';
+            document.getElementById('bottom-nav').classList.add('hidden');
+            document.getElementById('submit-area').classList.add('hidden');
+            document.body.classList.remove('pb-32');
+            document.body.classList.add('pb-12');
+
+            try {
+                const payload = JSON.parse(decodeURIComponent(atob(dataStr)));
+                
+                if (mode === 'feedback') {
+                    // Feedback Mode (For Teacher)
+                    document.getElementById('teacher-header').classList.remove('hidden');
+                    document.getElementById('teacher-display-name').innerText = payload.name || "Học sinh ẩn danh";
+                    document.getElementById('teacher-submit-area').classList.remove('hidden');
+
+                    payload.p1.forEach((ans, i) => lockAndGrade(`p1_q${i}`, ans, dataPart1[i].ans, dataPart1[i].opts.length));
+                    payload.p2a.forEach((ans, i) => lockAndGrade(`p2a_q${i}`, ans, dataPart2a[i].ans, eduTypes.length));
+                    payload.p2b.forEach((ans, i) => lockAndGrade(`p2b_q${i}`, ans, dataPart2b[i].ans, eduTypes.length));
+
+                    payload.p3.forEach((content, i) => {
+                        const editor = document.getElementById(`editor_p3_${i}`);
+                        const pureText = new DOMParser().parseFromString(content, "text/html").body.textContent.trim();
+                        editor.innerHTML = (!content || pureText === '') ? '<span style="color:#ef4444; font-style:italic;">(Không có câu trả lời)</span>' : content;
+                        editor.setAttribute('contenteditable', 'true');
+                        document.getElementById(`toolbar_p3_${i}`).classList.remove('hidden');
+                    });
+                } 
+                else if (mode === 'view_feedback') {
+                    // View Feedback Mode (For Student viewing graded test)
+                    document.getElementById('teacher-header').classList.remove('hidden');
+                    document.getElementById('teacher-header').classList.replace('border-t-sky-500', 'border-t-emerald-500');
+                    document.getElementById('teacher-instruction').innerHTML = `
+                        <div class="flex items-start space-x-3">
+                            <i class="fas fa-check-circle text-xl mt-0.5 text-emerald-600"></i>
+                            <div>
+                                <strong class="block text-base mb-1">BÀI ĐÃ ĐƯỢC CHẤM</strong>
+                                Dưới đây là bài làm của bạn kèm theo lời phê của Giáo viên. Hãy click vào các phần được <span class="bg-emerald-100 px-1 rounded text-emerald-800 font-medium">bôi sáng</span> để xem ghi chú chi tiết.
+                            </div>
+                        </div>`;
+                    document.getElementById('teacher-instruction').className = "bg-emerald-50 text-emerald-800 p-4 rounded-xl text-left text-sm border border-emerald-200 inline-block max-w-3xl mx-auto";
+                    
+                    document.getElementById('teacher-display-name').innerText = payload.name || "Học sinh";
+
+                    payload.p1.forEach((ans, i) => lockAndGrade(`p1_q${i}`, ans, dataPart1[i].ans, dataPart1[i].opts.length));
+                    payload.p2a.forEach((ans, i) => lockAndGrade(`p2a_q${i}`, ans, dataPart2a[i].ans, eduTypes.length));
+                    payload.p2b.forEach((ans, i) => lockAndGrade(`p2b_q${i}`, ans, dataPart2b[i].ans, eduTypes.length));
+
+                    payload.p3.forEach((content, i) => {
+                        const editor = document.getElementById(`editor_p3_${i}`);
+                        editor.innerHTML = content || '<span style="color:#ef4444; font-style:italic;">(Không có câu trả lời)</span>';
+                        editor.setAttribute('contenteditable', 'false');
+                    });
+                }
+            } catch (e) {
+                console.error("Invalid data format", e);
+            }
+        }
+
+        function lockAndGrade(namePrefix, studentAns, correctAns, totalOpts) {
+            for(let optIdx = 0; optIdx < totalOpts; optIdx++) {
+                const radio = document.getElementById(`${namePrefix}_opt${optIdx}`);
+                const label = document.getElementById(`label_${namePrefix}_opt${optIdx}`);
+                if(!radio || !label) continue;
+                
+                radio.disabled = true;
+                if(studentAns === optIdx) radio.checked = true;
+
+                if(optIdx === correctAns) {
+                    label.classList.add('correct-answer');
+                    // Add checkmark visual
+                    label.querySelector('.w-5').classList.add('bg-green-500', 'border-green-500');
+                    label.querySelector('.w-5').innerHTML = '<i class="fas fa-check text-white text-[10px]"></i>';
+                } else if (studentAns === optIdx && studentAns !== correctAns) {
+                    label.classList.add('wrong-answer');
+                    // Add cross visual
+                    label.querySelector('.w-5').classList.add('bg-red-500', 'border-red-500');
+                    label.querySelector('.w-5').innerHTML = '<i class="fas fa-times text-white text-[10px]"></i>';
+                }
+            }
+        }
+
+        // --- STREAMING_CHUNK:Teacher Editing toolbar... ---
+        function formatDoc(cmd, value=null) {
+            document.execCommand(cmd, false, value);
+        }
+
+        document.addEventListener('click', function(event) {
+            const tooltip = document.getElementById('floating-note-tooltip');
+            if (!tooltip.classList.contains('hidden')) {
+                if (!tooltip.contains(event.target) && !event.target.closest('.teacher-note-highlight')) {
+                    tooltip.classList.add('hidden');
+                }
+            }
+        });
+
+        window.showNoteTooltip = function(event, noteText) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const tooltip = document.getElementById('floating-note-tooltip');
+            const content = document.getElementById('floating-note-content');
+            const targetElement = event.currentTarget;
+
+            content.innerText = noteText;
+            tooltip.classList.remove('hidden');
+            
+            const rect = targetElement.getBoundingClientRect();
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+            
+            let topPos = rect.top + scrollTop - tooltipRect.height - 12;
+            let leftPos = rect.left + scrollLeft + (rect.width / 2) - (tooltipRect.width / 2);
+            const arrow = document.getElementById('tooltip-arrow');
+            
+            if (topPos < scrollTop) {
+                topPos = rect.bottom + scrollTop + 12;
+                arrow.classList.remove('-bottom-2', 'border-b', 'border-r');
+                arrow.classList.add('-top-2', 'border-t', 'border-l');
+            } else {
+                arrow.classList.remove('-top-2', 'border-t', 'border-l');
+                arrow.classList.add('-bottom-2', 'border-b', 'border-r');
+            }
+            
+            if (leftPos < scrollLeft + 10) leftPos = scrollLeft + 10;
+            if (leftPos + tooltipRect.width > scrollLeft + window.innerWidth - 10) {
+                leftPos = scrollLeft + window.innerWidth - tooltipRect.width - 10;
+            }
+            
+            tooltip.style.top = topPos + 'px';
+            tooltip.style.left = leftPos + 'px';
+        };
+
+        function addTeacherNote() {
+            const note = prompt("Nhập lời phê/ghi chú (chữ bôi đen sẽ được highlight xanh lá):");
+            if (note) {
+                const safeNote = note.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+                const selection = window.getSelection();
+                
+                if (selection.rangeCount > 0 && selection.toString().length > 0) {
+                    const selectedText = selection.toString();
+                    const html = `<span class="teacher-note-highlight" style="background-color: #d1fae5; border-bottom: 2px solid #10b981; cursor: pointer; padding: 0 4px; border-radius: 4px; font-weight: 600; color: #064e3b; transition: all 0.2s;" onclick="showNoteTooltip(event, '${safeNote}')" title="Click để xem ghi chú">${selectedText} <i class="fas fa-comment-dots text-xs text-emerald-600"></i></span>`;
+                    document.execCommand('insertHTML', false, html);
+                } else {
+                    const html = ` <span class="teacher-note-highlight" style="background-color: #d1fae5; color: #064e3b; padding: 2px 8px; border-radius: 6px; cursor: pointer; border: 1px solid #34d399; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 0.875rem;" onclick="showNoteTooltip(event, '${safeNote}')" title="Click để xem ghi chú"><i class="fas fa-comment-dots text-emerald-600"></i> Ghi chú</span> `;
+                    document.execCommand('insertHTML', false, html);
+                }
+            }
+        }
+
+        window.onload = initQuiz;
+    </script>
+</body>
+</html>
