@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preparation Quiz - Child Development</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #fffbeb; color: #1f2937; scroll-behavior: smooth; }
+        
+        /* Drag & Drop Styles */
+        .droppable-area {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 140px; min-height: 32px;
+            border: 2px dashed #f59e0b; border-radius: 0.375rem;
+            background-color: #fef3c7; vertical-align: bottom; padding: 0 8px; margin: 0 4px; transition: all 0.2s;
+        }
+        .droppable-area.drag-over { background-color: #fde68a; border-style: solid; }
+        
+        .draggable-item {
+            cursor: grab; display: inline-block; background-color: #ffffff;
+            border: 1px solid #d97706; color: #b45309; padding: 4px 12px;
+            border-radius: 9999px; font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: transform 0.1s; font-size: 0.9rem;
+        }
+        .draggable-item.linking-word { border-color: #2563eb; color: #1d4ed8; background-color: #eff6ff; }
+        .draggable-item:active { cursor: grabbing; transform: scale(0.95); }
+        
+        .correct-ans { border-color: #10b981 !important; background-color: #d1fae5 !important; color: #065f46 !important; }
+        .wrong-ans { border-color: #ef4444 !important; background-color: #fee2e2 !important; color: #991b1b !important;}
+
+        /* Hint Toggle */
+        .hint-content { display: none; margin-top: 8px; padding: 10px; background: #fff8f1; border-left: 3px solid #f59e0b; border-radius: 4px; font-size: 0.9rem; }
+        .hint-toggle:checked ~ .hint-content { display: block; }
+        .vietnamese-translation { display: none; color: #6b7280; font-size: 0.85rem; margin-top: 4px; font-style: italic;}
+        .translation-toggle:checked ~ .vietnamese-translation { display: block; }
+
+        /* Match items */
+        .match-drop-zone { min-height: 48px; border: 2px dashed #cbd5e1; border-radius: 0.5rem; display: flex; align-items: center; padding: 4px 8px; background-color: #f8fafc; }
+        .match-drop-zone.drag-over { background-color: #e2e8f0; border-color: #94a3b8; }
+        .match-item { cursor: grab; background-color: white; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 0.5rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: 100%; font-size: 0.95rem; }
+
+        /* Pages */
+        .page-section { display: none; animation: fadeIn 0.5s; }
+        .page-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Sticky Pool */
+        .sticky-pool { position: sticky; top: 1rem; z-index: 40; }
+
+        /* Feedback Editor */
+        .feedback-editor { min-height: 120px; border: 2px solid #e5e7eb; padding: 1rem; border-radius: 0.5rem; background-color: #fff; outline: none; transition: border-color 0.2s; line-height: 1.6;}
+        .feedback-editor:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1); }
+        .toolbar button { transition: all 0.2s; }
+        .toolbar button:hover { background-color: #e2e8f0; }
+
+        /* Banner */
+        #submit-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 50; transform: translateY(-100%); transition: transform 0.3s ease-in-out; }
+        #submit-banner.show { transform: translateY(0); }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Teacher Floating Note -->
+    <div id="floating-note-tooltip" class="hidden absolute z-[100] bg-white rounded-xl shadow-xl border border-blue-200 p-4 max-w-sm transition-opacity duration-200 pointer-events-auto">
+        <div class="flex items-center space-x-2 mb-2 border-b border-blue-100 pb-2">
+            <i class="fas fa-comment-dots text-blue-500 text-lg"></i>
+            <span class="text-sm font-bold text-blue-800">Giáo viên ghi chú</span>
+        </div>
+        <p id="floating-note-content" class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"></p>
+        <div id="tooltip-arrow" class="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-blue-200 rotate-45"></div>
+    </div>
+
+    <!-- Submit Banner -->
+    <div id="submit-banner" class="bg-amber-500 text-white shadow-lg">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-check-circle text-2xl" id="banner-icon"></i>
+                <div>
+                    <h3 class="font-bold text-lg leading-tight" id="banner-title">Nộp bài thành công!</h3>
+                    <p class="text-sm text-amber-50" id="banner-subtitle">Điểm trắc nghiệm (Tự động): <span id="banner-score" class="font-bold text-white"></span></p>
+                </div>
+            </div>
+            <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-2 w-full md:w-auto">
+                <input type="text" id="share-link" readonly class="text-sm text-gray-800 bg-white px-2 py-1.5 rounded w-full md:w-72 outline-none font-mono">
+                <button onclick="copyLink()" class="bg-white text-amber-700 hover:bg-amber-50 px-4 py-1.5 rounded font-semibold transition w-full md:w-auto flex items-center justify-center space-x-1" id="copy-btn">
+                    <i class="fas fa-copy"></i> <span>Copy Link</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Header -->
+        <div id="main-header" class="bg-white rounded-2xl shadow-sm border border-amber-100 p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-amber-400"></div>
+            <div class="flex items-center space-x-4">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-50 text-amber-500 border border-amber-100">
+                    <i class="fas fa-child text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Preparation Quiz: Child Development</h1>
+                    <p class="text-gray-500 text-sm mt-1">Hoàn thành bài tập để xây dựng nền tảng từ vựng và tư duy xã hội.</p>
+                </div>
+            </div>
+            <div class="w-full md:w-auto" id="name-input-section">
+                <input type="text" id="student-name" placeholder="Nhập Họ và Tên của bạn..." class="w-full md:w-72 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 outline-none font-semibold text-gray-800 bg-gray-50 placeholder-gray-400">
+            </div>
+        </div>
+
+        <!-- Teacher Display Info -->
+        <div id="teacher-info-panel" class="hidden mb-8 space-y-4">
+            <div class="p-6 bg-blue-50 rounded-xl border border-blue-200 shadow-sm text-center">
+                <h2 class="text-lg font-medium text-blue-900">Bài làm của học sinh: <br> <span id="display-student-name" class="text-2xl font-bold text-blue-700 uppercase mt-1 inline-block"></span></h2>
+            </div>
+            <div class="bg-yellow-50 text-yellow-800 p-4 rounded-lg text-sm border border-yellow-200 flex items-start gap-3">
+                <i class="fas fa-chalkboard-teacher text-lg mt-0.5"></i>
+                <div>
+                    <strong>CHẾ ĐỘ GIÁO VIÊN CHẤM BÀI (FEEDBACK MODE)</strong><br>
+                    Các câu khách quan đã được chấm điểm tự động. Tại <b>Phần 3 (Tự luận)</b>, bôi đen văn bản của học sinh và sử dụng thanh công cụ để chỉnh sửa hoặc thêm ghi chú.
+                </div>
+            </div>
+        </div>
+
+        <form id="quiz-form">
+            <!-- PAGE 1: VOCABULARY -->
+            <div id="page-1" class="page-section active space-y-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4 mb-6">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center font-bold mr-3">P1</div>
+                            <h2 class="text-xl font-bold text-gray-800">Multiple Choice & Matching</h2>
+                        </div>
+                        <span class="text-sm text-gray-500 font-medium">10 Câu hỏi</span>
+                    </div>
+
+                    <p class="text-gray-600 mb-6 text-sm italic"><i class="fas fa-info-circle text-amber-500 mr-1"></i> Chọn đáp án Tiếng Anh tương ứng với ngữ cảnh/định nghĩa được đưa ra.</p>
+
+                    <!-- MCQ Section -->
+                    <div class="space-y-6 mb-10" id="mcq-container">
+                        <!-- Q1 -->
+                        <div class="mcq-question bg-gray-50 p-4 rounded-lg border border-gray-200" data-ans="A">
+                            <p class="font-semibold text-gray-800 mb-3">1. Giai đoạn sơ sinh và ấu thơ là thời kỳ mà trẻ em cực kỳ nhạy bén, dễ tiếp thu và thay đổi dựa trên môi trường xung quanh. Cụm từ nào miêu tả đúng nhất giai đoạn này?</p>
+                            <div class="space-y-2 pl-2">
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q1" value="A" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">A. Impressionable stage of development</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q1" value="B" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">B. Independent decision-making period</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q1" value="C" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">C. Rebellious and resistant phase</span></label>
+                            </div>
+                        </div>
+                        <!-- Q2 -->
+                        <div class="mcq-question bg-gray-50 p-4 rounded-lg border border-gray-200" data-ans="C">
+                            <p class="font-semibold text-gray-800 mb-3">2. Hành vi nào của trẻ mô tả việc chúng học hỏi kiến thức đầu đời từ việc nhìn các hành động của cha mẹ rồi làm theo một cách tự nhiên?</p>
+                            <div class="space-y-2 pl-2">
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q2" value="A" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">A. Critical thinking and analyzing</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q2" value="B" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">B. Rebellious and challenging</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q2" value="C" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">C. Observe and imitate</span></label>
+                            </div>
+                        </div>
+                        <!-- Q3 -->
+                        <div class="mcq-question bg-gray-50 p-4 rounded-lg border border-gray-200" data-ans="B">
+                            <p class="font-semibold text-gray-800 mb-3">3. Trong môi trường học đường, các em học sinh có xu hướng học theo những thói quen xấu hoặc thái độ tiêu cực từ bạn bè xung quanh. Thuật ngữ nào chỉ sự ảnh hưởng này?</p>
+                            <div class="space-y-2 pl-2">
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q3" value="A" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">A. Positive reinforcement</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q3" value="B" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">B. Negative peer influence</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q3" value="C" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">C. Social cohesion</span></label>
+                            </div>
+                        </div>
+                        <!-- Q4 -->
+                        <div class="mcq-question bg-gray-50 p-4 rounded-lg border border-gray-200" data-ans="A">
+                            <p class="font-semibold text-gray-800 mb-3">4. Việc dạy dỗ đúng cách ở những năm tháng đầu đời giúp tạo ra nền tảng căn bản cho sự phát triển về tính cách, đạo đức của trẻ. Cụm từ nào mang nghĩa "sự hình thành tính cách"?</p>
+                            <div class="space-y-2 pl-2">
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q4" value="A" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">A. Character formation</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q4" value="B" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">B. Physical development</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q4" value="C" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">C. Progressive values</span></label>
+                            </div>
+                        </div>
+                        <!-- Q5 -->
+                        <div class="mcq-question bg-gray-50 p-4 rounded-lg border border-gray-200" data-ans="C">
+                            <p class="font-semibold text-gray-800 mb-3">5. Trường học giúp học sinh làm quen với các nội quy, giờ giấc, quy định chuẩn mực. Nhờ vậy, học sinh được học trong môi trường nào?</p>
+                            <div class="space-y-2 pl-2">
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q5" value="A" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">A. Unregulated setting</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q5" value="B" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">B. Overprotective environment</span></label>
+                                <label class="flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-white transition"><input type="radio" name="p1_q5" value="C" class="form-radio text-amber-500 w-4 h-4"> <span class="text-sm font-medium">C. Structured learning environments</span></label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Matching Section -->
+                    <h4 class="font-bold text-gray-700 border-b pb-2 mb-4">Ghép nối từ vựng (Matching)</h4>
+                    <p class="text-xs text-gray-500 mb-4">Kéo các từ Tiếng Anh ở cột bên phải thả vào ô trống tương ứng với định nghĩa mô tả nó ở cột bên trái.</p>
+                    
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Definitions Column -->
+                        <div class="space-y-3 flex-1" id="match-container">
+                            <!-- M1 -->
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100 flex-1 text-sm text-blue-900 leading-snug">
+                                    <strong>1.</strong> The adults who are primarily responsible for looking after a baby.
+                                    <div class="mt-1">
+                                        <input type="checkbox" id="trans1" class="translation-toggle hidden">
+                                        <label for="trans1" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-0.5 rounded cursor-pointer transition">Dịch</label>
+                                        <div class="vietnamese-translation">Những người chăm sóc đầu tiên (thường là cha mẹ).</div>
+                                    </div>
+                                </div>
+                                <div class="match-drop-zone w-48 flex-shrink-0" ondrop="dropMatch(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="m1" data-pool="match"></div>
+                            </div>
+                            <!-- M2 -->
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100 flex-1 text-sm text-blue-900 leading-snug">
+                                    <strong>2.</strong> To establish a strong base for future development.
+                                    <div class="mt-1">
+                                        <input type="checkbox" id="trans2" class="translation-toggle hidden">
+                                        <label for="trans2" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-0.5 rounded cursor-pointer transition">Dịch</label>
+                                        <div class="vietnamese-translation">Đặt nền móng vững chắc.</div>
+                                    </div>
+                                </div>
+                                <div class="match-drop-zone w-48 flex-shrink-0" ondrop="dropMatch(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="m2" data-pool="match"></div>
+                            </div>
+                            <!-- M3 -->
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100 flex-1 text-sm text-blue-900 leading-snug">
+                                    <strong>3.</strong> A strong feeling of connection and affection between people.
+                                    <div class="mt-1">
+                                        <input type="checkbox" id="trans3" class="translation-toggle hidden">
+                                        <label for="trans3" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-0.5 rounded cursor-pointer transition">Dịch</label>
+                                        <div class="vietnamese-translation">Sợi dây gắn kết tình cảm.</div>
+                                    </div>
+                                </div>
+                                <div class="match-drop-zone w-48 flex-shrink-0" ondrop="dropMatch(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="m3" data-pool="match"></div>
+                            </div>
+                            <!-- M4 -->
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100 flex-1 text-sm text-blue-900 leading-snug">
+                                    <strong>4.</strong> Direct monitoring and teaching tailored for a single individual.
+                                    <div class="mt-1">
+                                        <input type="checkbox" id="trans4" class="translation-toggle hidden">
+                                        <label for="trans4" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-0.5 rounded cursor-pointer transition">Dịch</label>
+                                        <div class="vietnamese-translation">Sự giám sát / hướng dẫn một kèm một.</div>
+                                    </div>
+                                </div>
+                                <div class="match-drop-zone w-48 flex-shrink-0" ondrop="dropMatch(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="m4" data-pool="match"></div>
+                            </div>
+                            <!-- M5 -->
+                            <div class="flex items-center gap-3">
+                                <div class="bg-blue-50 p-3 rounded border border-blue-100 flex-1 text-sm text-blue-900 leading-snug">
+                                    <strong>5.</strong> A teaching method that treats all students exactly the same way.
+                                    <div class="mt-1">
+                                        <input type="checkbox" id="trans5" class="translation-toggle hidden">
+                                        <label for="trans5" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-0.5 rounded cursor-pointer transition">Dịch</label>
+                                        <div class="vietnamese-translation">Phương pháp áp dụng chung/ cào bằng cho tất cả mọi người.</div>
+                                    </div>
+                                </div>
+                                <div class="match-drop-zone w-48 flex-shrink-0" ondrop="dropMatch(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="m5" data-pool="match"></div>
+                            </div>
+                        </div>
+
+                        <!-- Match Pool Column -->
+                        <div class="w-full md:w-64 bg-gray-50 border border-gray-200 rounded-lg p-4 sticky-pool shadow-sm h-fit">
+                            <h5 class="text-sm font-bold text-gray-600 mb-3 text-center border-b pb-2">WORD POOL</h5>
+                            <div class="flex flex-col gap-2" id="pool-match" data-pool="match">
+                                <div class="match-item text-center text-amber-700 font-medium" draggable="true" ondragstart="drag(event)" id="drag-m3" data-val="m3">emotional bond</div>
+                                <div class="match-item text-center text-amber-700 font-medium" draggable="true" ondragstart="drag(event)" id="drag-m1" data-val="m1">first caregivers</div>
+                                <div class="match-item text-center text-amber-700 font-medium" draggable="true" ondragstart="drag(event)" id="drag-m5" data-val="m5">one-size-fits-all approach</div>
+                                <div class="match-item text-center text-amber-700 font-medium" draggable="true" ondragstart="drag(event)" id="drag-m2" data-val="m2">lay a solid foundation</div>
+                                <div class="match-item text-center text-amber-700 font-medium" draggable="true" ondragstart="drag(event)" id="drag-m4" data-val="m4">one-on-one supervision</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 text-right">
+                        <button type="button" onclick="nextPage('page-1', 'page-2')" class="bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-6 rounded-lg transition shadow">Tiếp tục: Phần 2 <i class="fas fa-arrow-right ml-2"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 2: GAP-FILL -->
+            <div id="page-2" class="page-section space-y-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4 mb-6">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center font-bold mr-3">P2</div>
+                            <h2 class="text-xl font-bold text-gray-800">Gap-fill & Categorize</h2>
+                        </div>
+                        <span class="text-sm text-gray-500 font-medium">10 Câu đơn & 3 Đoạn văn</span>
+                    </div>
+                    
+                    <p class="text-sm text-gray-600 mb-6 border-l-4 border-amber-400 pl-3">
+                        <strong>Hướng dẫn:</strong> Kéo các từ (Vocab / Linking words) thả vào chỗ trống tương ứng. Bạn hãy cuộn trang cẩn thận để bảng từ khóa di chuyển theo. Sau khi hoàn thành, chọn loại câu miêu tả <strong>Reason (Nguyên nhân/Thực trạng)</strong> hay <strong>Impact (Tác động/Kết quả)</strong>.
+                    </p>
+
+                    <!-- PART 2A: Single Sentences -->
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 bg-gray-100 px-3 py-1 inline-block rounded">A. Single Sentences</h3>
+                    <div class="flex flex-col md:flex-row gap-6 relative">
+                        
+                        <!-- Content Column -->
+                        <div class="flex-1 space-y-5 text-gray-800 leading-loose text-sm" id="gapfill-container">
+                            <!-- S1 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">1. Unlike the changing environment of schools, parents provide a <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="constant_presence" data-pool="gapfill-a"></div> in a child's life.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Reason"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S2 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">2. This continuous interaction allows parents to deeply <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="reinforce" data-pool="gapfill-a"></div> core values and beliefs over time.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Impact"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S3 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">3. However, some parents tend to <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="overprotect" data-pool="gapfill-a"></div> their children from any possible hardships.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Reason"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S4 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">4. Such parenting style can severely limit opportunities for independent decisions and lower a child's <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="resilience" data-pool="gapfill-a"></div>.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Impact"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S5 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">5. Schools assemble students from various backgrounds, which helps establish strong <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="social_cohesion" data-pool="gapfill-a"></div>.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Impact"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S6 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">6. Teachers act as a reliable <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="moral_compass" data-pool="gapfill-a"></div>, guiding students to make ethical responses.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Reason"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S7 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">7. In a large class, individual learning gaps and difficulties often remain <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="unnoticed" data-pool="gapfill-a"></div> by teachers.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Reason"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S8 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">8. Standardized curricula create a well-educated <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="workforce" data-pool="gapfill-a"></div> ready for diverse industries.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Impact"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S9 -->
+                            <div class="gapfill-row pb-3 border-b border-gray-100 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">9. The uniform teaching method means that different learning abilities cannot be adequately <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="addressed" data-pool="gapfill-a"></div>.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Reason"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                            <!-- S10 -->
+                            <div class="gapfill-row flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                                <div class="flex-1">10. Strict rules and device bans ensure students will not be <div class="droppable-area" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="distracted" data-pool="gapfill-a"></div> during classroom sessions.</div>
+                                <select class="type-select w-36 border-gray-300 rounded p-1.5 border flex-shrink-0" data-expected="Impact"><option value="">-- Phân loại --</option><option value="Reason">Reason</option><option value="Impact">Impact</option></select>
+                            </div>
+                        </div>
+
+                        <!-- Sticky Word Pool Column (Part 2A) -->
+                        <div class="w-full md:w-56 lg:w-64 flex-shrink-0">
+                            <div class="bg-orange-50 p-4 rounded-lg border border-orange-200 sticky-pool shadow-sm" id="pool-vocab-a">
+                                <h5 class="text-xs font-bold text-orange-800 mb-3 uppercase border-b border-orange-200 pb-2">Vocabulary (Part 2A)</h5>
+                                <div class="flex flex-wrap gap-2" id="wrap-vocab-a" data-pool="gapfill-a">
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v1" data-val="overprotect" data-pool="gapfill-a">overprotect</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v2" data-val="moral_compass" data-pool="gapfill-a">moral compass</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v4" data-val="reinforce" data-pool="gapfill-a">reinforce</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v5" data-val="resilience" data-pool="gapfill-a">resilience</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v6" data-val="distracted" data-pool="gapfill-a">distracted</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v7" data-val="social_cohesion" data-pool="gapfill-a">social cohesion</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v8" data-val="unnoticed" data-pool="gapfill-a">unnoticed</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v10" data-val="constant_presence" data-pool="gapfill-a">constant presence</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v11" data-val="workforce" data-pool="gapfill-a">workforce</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="v12" data-val="addressed" data-pool="gapfill-a">addressed</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PART 2B: Paragraphs -->
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 mt-8 bg-gray-100 px-3 py-1 inline-block rounded">B. Paragraphs Building</h3>
+                    
+                    <div class="flex flex-col md:flex-row gap-6 relative">
+                        <!-- Content -->
+                        <div class="flex-1 space-y-6" id="para-container">
+                            
+                            <!-- Paragraph 1 -->
+                            <div class="p-5 bg-white border border-gray-200 shadow-sm rounded-lg text-sm leading-relaxed">
+                                <p class="mb-3 font-bold text-blue-800 border-b pb-1">Paragraph 1: Transmission of parental biases</p>
+                                <p>
+                                    <div class="droppable-area linking-word mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="First_and_foremost" data-pool="gapfill-b"></div>, children rely heavily on parents as their primary source of knowledge and values. If parents unknowingly hold certain <div class="droppable-area mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="outdated_beliefs" data-pool="gapfill-b"></div>, they may unintentionally pass these personal prejudices on to their offspring. <div class="droppable-area linking-word mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="Consequently" data-pool="gapfill-b"></div>, there is a potential continuation of unhealthy misconceptions into the child's adulthood.
+                                </p>
+                            </div>
+
+                            <!-- Paragraph 2 -->
+                            <div class="p-5 bg-white border border-gray-200 shadow-sm rounded-lg text-sm leading-relaxed">
+                                <p class="mb-3 font-bold text-blue-800 border-b pb-1">Paragraph 2: The role of structured school layout</p>
+                                <p>
+                                    Schools operate under clear rules, schedules, and expectations where areas like canteens and libraries are designed with their own purpose. <div class="droppable-area linking-word mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="The_underlying_reason_is" data-pool="gapfill-b"></div> that a structured environment significantly promotes discipline and self-management. <div class="droppable-area linking-word mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="As_a_result" data-pool="gapfill-b"></div>, students are better prepared to follow societal norms, bridging the <div class="droppable-area mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="educational_inequality" data-pool="gapfill-b"></div> gap in the long run.
+                                </p>
+                            </div>
+
+                            <!-- Paragraph 3 -->
+                            <div class="p-5 bg-white border border-gray-200 shadow-sm rounded-lg text-sm leading-relaxed">
+                                <p class="mb-3 font-bold text-blue-800 border-b pb-1">Paragraph 3: Group activities and social skills</p>
+                                <p>
+                                    Schools create opportunities to participate in group activities and <div class="droppable-area mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="collaborative_learning" data-pool="gapfill-b"></div>. Through such teamwork exercises, teachers <div class="droppable-area linking-word mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="furthermore" data-pool="gapfill-b"></div> teach students to respect diversity and cooperate with others. <div class="droppable-area linking-word mx-1" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)" data-expected="Ultimately" data-pool="gapfill-b"></div>, this regular interaction develops crucial communication skills and helps them become civilized citizens.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Sticky Pool Column (Part 2B) -->
+                        <div class="w-full md:w-56 lg:w-64 flex-shrink-0">
+                            <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 sticky-pool shadow-sm" id="pool-vocab-b">
+                                <h5 class="text-xs font-bold text-blue-800 mb-3 uppercase border-b border-blue-200 pb-2">Vocab & Links (Part 2B)</h5>
+                                <div class="flex flex-wrap gap-2" id="wrap-vocab-b" data-pool="gapfill-b">
+                                    <!-- Vocab -->
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="vb1" data-val="outdated_beliefs" data-pool="gapfill-b">outdated beliefs</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="vb2" data-val="educational_inequality" data-pool="gapfill-b">educational inequality</div>
+                                    <div class="draggable-item" draggable="true" ondragstart="drag(event)" id="vb3" data-val="collaborative_learning" data-pool="gapfill-b">collaborative learning</div>
+                                    
+                                    <!-- Linking words -->
+                                    <div class="draggable-item linking-word" draggable="true" ondragstart="drag(event)" id="l1" data-val="First_and_foremost" data-pool="gapfill-b">First and foremost</div>
+                                    <div class="draggable-item linking-word" draggable="true" ondragstart="drag(event)" id="l2" data-val="The_underlying_reason_is" data-pool="gapfill-b">The underlying reason is</div>
+                                    <div class="draggable-item linking-word" draggable="true" ondragstart="drag(event)" id="l3" data-val="Consequently" data-pool="gapfill-b">Consequently</div>
+                                    <div class="draggable-item linking-word" draggable="true" ondragstart="drag(event)" id="l4" data-val="As_a_result" data-pool="gapfill-b">As a result</div>
+                                    <div class="draggable-item linking-word" draggable="true" ondragstart="drag(event)" id="l5" data-val="furthermore" data-pool="gapfill-b">furthermore</div>
+                                    <div class="draggable-item linking-word" draggable="true" ondragstart="drag(event)" id="l6" data-val="Ultimately" data-pool="gapfill-b">Ultimately</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" onclick="nextPage('page-2', 'page-1')" class="text-gray-500 hover:text-gray-800 font-semibold py-2 px-4 transition"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
+                        <button type="button" onclick="nextPage('page-2', 'page-3')" class="bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-6 rounded-lg transition shadow">Tiếp tục: Phần 3 <i class="fas fa-arrow-right ml-2"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 3: SOCRATIC QUESTIONS (ROLE OF PARENTS) -->
+            <div id="page-3" class="page-section space-y-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4 mb-6">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center font-bold mr-3">P3</div>
+                            <h2 class="text-xl font-bold text-gray-800">Socratic Questions: Role of Parents</h2>
+                        </div>
+                        <span class="text-sm text-gray-500 font-medium">Phần 1/2</span>
+                    </div>
+
+                    <p class="text-sm text-gray-600 mb-8 border-l-4 border-amber-400 pl-3">
+                        <strong>Hướng dẫn:</strong> Đọc chuỗi câu hỏi gợi ý và tổng hợp lại thành <strong>MỘT đoạn văn hoàn chỉnh duy nhất</strong> cho mỗi ý lớn. Sử dụng các Vocab Hint ẩn (nhấn vào để mở) để nâng cao chất lượng bài viết.
+                    </p>
+
+                    <div class="space-y-10" id="p3-parents-container">
+                        
+                        <!-- SECTION A: ROLE OF PARENTS (ADVANTAGES) -->
+                        <div>
+                            <h3 class="text-lg font-bold text-green-700 bg-green-50 px-3 py-1 rounded inline-block mb-4 border border-green-200">A. Role of Parents (Advantages)</h3>
+                            
+                            <!-- Q1 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">1. Early influence during formative years</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Trẻ em tương tác với bố mẹ từ khi nào? Thời điểm đó, trẻ em đang ở trong giai đoạn phát triển đặc thù nào? Ở giai đoạn này, trẻ thường có xu hướng hành động ra sao khi nhìn thấy các hành vi, thái độ và giá trị của bố mẹ? Điều này cuối cùng giúp tạo ra điều gì cho tính cách, hành vi và nhận thức của trẻ?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q1" class="hint-toggle hidden">
+                                    <label for="hint-q1" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>first caregivers</strong> (n): người chăm sóc đầu tiên</li>
+                                            <li><strong>impressionable stage of development</strong> (n): giai đoạn phát triển dễ tiếp thu</li>
+                                            <li><strong>observe and imitate</strong> (v): quan sát và bắt chước</li>
+                                            <li><strong>lays a solid foundation</strong> (v): đặt nền móng vững chắc</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p3_1" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p3_1" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q2 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">2. Consistent and Long-Term Influence</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Khác với giáo viên thường thay đổi theo từng cấp học, sự hiện diện của bố mẹ trong cuộc đời trẻ mang tính chất gì? Sự tương tác liên tục này cho phép bố mẹ làm gì với những giá trị và kỳ vọng đã dạy cho trẻ theo thời gian? Kết quả mang lại ảnh hưởng như thế nào đến sự phát triển tính cách của trẻ?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q2" class="hint-toggle hidden">
+                                    <label for="hint-q2" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>constant presence</strong> (n): sự hiện diện liên tục</li>
+                                            <li><strong>continuous interaction</strong> (n): sự tương tác liên tục</li>
+                                            <li><strong>reinforce</strong> (v): củng cố</li>
+                                            <li><strong>character development</strong> (n): sự phát triển tính cách</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p3_2" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p3_2" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q3 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">3. Home schooling: Strong emotional bond and personalized guidance</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Việc trẻ học tập trong một môi trường được yêu thương bởi những người thấu hiểu mình tạo ra điều gì cho trẻ? Sự hướng dẫn của bố mẹ được cá nhân hóa như thế nào dựa trên sự thấu hiểu về điểm mạnh/yếu của con? Nhờ việc giám sát 1 kèm 1 này, phương pháp học tập có thể được điều chỉnh ra sao để mang lại kết quả học tập hiệu quả hơn?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q3" class="hint-toggle hidden">
+                                    <label for="hint-q3" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>emotional bond and sense of security</strong> (n): sợi dây gắn kết tình cảm và cảm giác an toàn</li>
+                                            <li><strong>comfortable learning atmosphere</strong> (n): bầu không khí học tập thoải mái</li>
+                                            <li><strong>one-on-one supervision</strong> (n): sự giám sát một kèm một</li>
+                                            <li><strong>tailored to individual needs</strong> (collocation): được điều chỉnh phù hợp nhu cầu cá nhân</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p3_3" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p3_3" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+                            
+                            <!-- Q4 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">4. Society & Government (Macro Level)</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Ở góc độ vĩ mô, những đứa trẻ nhận được sự hướng dẫn đúng đắn từ cha mẹ sẽ phát triển được những phẩm chất gì? Cuối cùng, chúng sẽ lớn lên trở thành những người như thế nào cho xã hội?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q4" class="hint-toggle hidden">
+                                    <label for="hint-q4" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>proper guidance</strong> (n): sự hướng dẫn đúng đắn</li>
+                                            <li><strong>behavioral ethics</strong> (n): đạo đức hành vi</li>
+                                            <li><strong>responsible and productive citizens</strong> (n): những công dân có trách nhiệm và năng suất</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p3_4" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p3_4" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION B: ROLE OF PARENTS (DISADVANTAGES) -->
+                        <div class="mt-8">
+                            <h3 class="text-lg font-bold text-red-700 bg-red-50 px-3 py-1 rounded inline-block mb-4 border border-red-200">B. Role of Parents (Disadvantages)</h3>
+                            
+                            <!-- Q5 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">5. Risk of over-protection or excessive pressure</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Nếu cha mẹ bảo vệ con cái quá mức, trẻ sẽ bị hạn chế cơ hội gì? Điều này dẫn đến sự suy giảm về những khía cạnh tâm lý nào khi trẻ phải đối mặt với khó khăn? Thêm vào đó, nếu cha mẹ đặt kỳ vọng quá cao, điều gì sẽ xảy ra với tâm lý của con cái?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q5" class="hint-toggle hidden">
+                                    <label for="hint-q5" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>overprotect</strong> (v): bảo vệ quá mức</li>
+                                            <li><strong>independent decisions</strong> (n): những quyết định độc lập</li>
+                                            <li><strong>reduced resilience</strong> (n): giảm khả năng phục hồi/chống chịu</li>
+                                            <li><strong>constant performance pressure</strong> (n): áp lực thành tích liên tục</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p3_5" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p3_5" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+                            
+                            <!-- Q6 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">6. Possible transmission of parental biases</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Do trẻ coi cha mẹ là nguồn kiến thức và giá trị chính, điều gì có thể xảy ra nếu cha mẹ có những định kiến hoặc quan niệm lỗi thời? Việc vô tình truyền đạt những điều này sẽ dẫn đến tiềm năng gì khi trẻ trưởng thành?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q6" class="hint-toggle hidden">
+                                    <label for="hint-q6" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>outdated beliefs / perspectives</strong> (n): những quan niệm/góc nhìn lỗi thời</li>
+                                            <li><strong>unintentionally pass on</strong> (v): vô tình truyền lại</li>
+                                            <li><strong>personal prejudices</strong> (n): những định kiến cá nhân</li>
+                                            <li><strong>unhealthy behaviors</strong> (n): những hành vi không lành mạnh</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p3_6" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p3_6" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="mt-8 flex justify-between">
+                        <button type="button" onclick="nextPage('page-3', 'page-2')" class="text-gray-500 hover:text-gray-800 font-semibold py-2 px-4 transition"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
+                        <button type="button" onclick="nextPage('page-3', 'page-4')" class="bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-6 rounded-lg transition shadow">Tiếp tục: Phần 4 <i class="fas fa-arrow-right ml-2"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PAGE 4: SOCRATIC QUESTIONS (ROLE OF SCHOOLS) -->
+            <div id="page-4" class="page-section space-y-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+                    <div class="flex justify-between items-end border-b border-gray-100 pb-4 mb-6">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded bg-amber-100 text-amber-600 flex items-center justify-center font-bold mr-3">P4</div>
+                            <h2 class="text-xl font-bold text-gray-800">Socratic Questions: Role of Schools</h2>
+                        </div>
+                        <span class="text-sm text-gray-500 font-medium">Phần 2/2</span>
+                    </div>
+
+                    <p class="text-sm text-gray-600 mb-8 border-l-4 border-amber-400 pl-3">
+                        <strong>Hướng dẫn:</strong> Tiếp tục tổng hợp câu trả lời thành một đoạn văn hoàn chỉnh. Ở cuối trang này, bạn có thể nộp bài.
+                    </p>
+
+                    <div class="space-y-10" id="p4-schools-container">
+                        
+                        <!-- SECTION C: ROLE OF SCHOOLS (ADVANTAGES) -->
+                        <div>
+                            <h3 class="text-lg font-bold text-green-700 bg-green-50 px-3 py-1 rounded inline-block mb-4 border border-green-200">C. Role of Schools (Advantages)</h3>
+                            
+                            <!-- Q7 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">7. Gain diverse knowledge and perspectives (Micro Level)</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Ở trường, học sinh được giảng dạy bởi đối tượng nào? Nhờ vậy, các em có cơ hội tiếp xúc với những gì (môn học, ý tưởng...)? Kết quả là các em sẽ có được nền tảng gì cho bậc học cao hơn và nghề nghiệp tương lai?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q7" class="hint-toggle hidden">
+                                    <label for="hint-q7" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>trained and qualified teachers</strong> (n): những giáo viên được đào tạo và có chuyên môn</li>
+                                            <li><strong>exposure to different subjects and viewpoints</strong> (n): sự tiếp xúc với các môn học và quan điểm khác nhau</li>
+                                            <li><strong>diverse knowledge</strong> (n): kiến thức đa dạng</li>
+                                            <li><strong>broader understanding</strong> (n): sự hiểu biết sâu rộng hơn</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_7" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_7" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q8 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">8. Structured environments & discipline (Micro Level)</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Trường học vận hành dựa trên những yếu tố nào (luật lệ, thời gian biểu)? Cấu trúc không gian của trường (canteen, thư viện, lớp học) được thiết kế ra sao? Môi trường học tập có cấu trúc này giúp cải thiện những kỹ năng quản lý cá nhân nào của học sinh, và giúp các em tránh được điều gì (ví dụ: việc cấm dùng điện thoại)?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q8" class="hint-toggle hidden">
+                                    <label for="hint-q8" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>structured learning environments</strong> (n): môi trường học tập có cấu trúc</li>
+                                            <li><strong>clear rules and schedules</strong> (n): những quy định và lịch trình rõ ràng</li>
+                                            <li><strong>improved discipline and self-management</strong> (n): cải thiện tính kỷ luật và tự quản lý</li>
+                                            <li><strong>be distracted</strong> (adj): bị xao nhãng</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_8" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_8" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q9 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">9. Act as a small society & Instill moral value (Micro Level)</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Trường học tạo cơ hội cho học sinh tham gia vào các hoạt động nào để phát triển kỹ năng giao tiếp và tạo ra sự gắn kết xã hội? Khi mắc sai lầm trong "xã hội thu nhỏ" này, các em nhận được sự hỗ trợ gì? Thêm vào đó, giáo viên đóng vai trò gì trong việc dạy các em tôn trọng sự khác biệt, hợp tác và có trách nhiệm để trở thành công dân văn minh?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q9" class="hint-toggle hidden">
+                                    <label for="hint-q9" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>collaborative learning</strong> (n): học tập hợp tác</li>
+                                            <li><strong>sense of belonging and social cohesion</strong> (n): cảm giác thuộc về và sự gắn kết xã hội</li>
+                                            <li><strong>role models / moral compass</strong> (n): hình mẫu / kim chỉ nam đạo đức</li>
+                                            <li><strong>ethical responses</strong> (n): những phản ứng/cách ứng xử có đạo đức</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_9" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_9" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q10 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">10. Standardized education & Social cohesion (Macro Level)</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Ở góc độ vĩ mô, việc chính phủ áp dụng chương trình giáo dục chuẩn hóa giúp đảm bảo điều kiện gì và giảm thiểu vấn đề gì trong xã hội? Bên cạnh đó, việc trường học tập hợp các học sinh từ nhiều hoàn cảnh khác nhau giúp nuôi dưỡng điều gì và đóng góp ra sao cho sự gắn kết xã hội?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q10" class="hint-toggle hidden">
+                                    <label for="hint-q10" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>standardized education</strong> (n): nền giáo dục chuẩn hóa</li>
+                                            <li><strong>reduce educational inequality</strong> (v): giảm thiểu bất bình đẳng giáo dục</li>
+                                            <li><strong>agents of social cohesion</strong> (n): những tác nhân tạo sự gắn kết xã hội</li>
+                                            <li><strong>foster mutual understanding</strong> (v): nuôi dưỡng sự thấu hiểu lẫn nhau</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_10" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_10" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q11 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">11. Contribute to a well-educated workforce (Macro Level)</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Thông qua việc trang bị các kiến thức và kỹ năng thiết yếu, trường học chuẩn bị cho cá nhân khả năng tham gia vào những lĩnh vực nào? Cuối cùng, điều này cung cấp nguồn lực gì cho thị trường lao động quốc gia?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q11" class="hint-toggle hidden">
+                                    <label for="hint-q11" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>equip students with essential knowledge</strong> (v): trang bị cho học sinh kiến thức thiết yếu</li>
+                                            <li><strong>diverse occupations</strong> (n): những nghề nghiệp đa dạng</li>
+                                            <li><strong>well-educated workforce</strong> (n): lực lượng lao động được giáo dục tốt / chất lượng cao</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_11" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_11" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION D: ROLE OF SCHOOLS (DISADVANTAGES) -->
+                        <div class="mt-8">
+                            <h3 class="text-lg font-bold text-red-700 bg-red-50 px-3 py-1 rounded inline-block mb-4 border border-red-200">D. Role of Schools (Disadvantages)</h3>
+                            
+                            <!-- Q12 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">12. Less personalized attention & Poor teaching approach</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Lớp học đông người (large class sizes) khiến giáo viên gặp khó khăn gì trong việc theo dõi từng cá nhân? Khi thiếu sự chú ý đến tiến độ của học sinh, những lỗ hổng kiến thức sẽ rơi vào tình trạng nào? Hậu quả dài hạn của phương pháp giảng dạy thiếu sát sao này đối với học sinh là gì?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q12" class="hint-toggle hidden">
+                                    <label for="hint-q12" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>less personalized attention</strong> (n): ít sự chú ý/quan tâm mang tính cá nhân hơn</li>
+                                            <li><strong>monitor each child</strong> (v): theo dõi từng trẻ</li>
+                                            <li><strong>unnoticed and unresolved</strong> (adj): không được nhận ra và không được giải quyết</li>
+                                            <li><strong>long-term negative effects</strong> (n): những tác động tiêu cực dài hạn</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_12" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_12" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q13 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">13. Focus on one-size-fits-all approach</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Việc áp dụng chung một chương trình và phương pháp cho tất cả học sinh được gọi là gì? Cách tiếp cận này tạo ra hạn chế gì đối với những học sinh có khả năng và nhu cầu học tập khác biệt? Hậu quả là các em sẽ cảm thấy thế nào khi tiếp thu bài học trên lớp?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q13" class="hint-toggle hidden">
+                                    <label for="hint-q13" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>one-size-fits-all approach</strong> (n): phương pháp cào bằng / áp dụng chung cho tất cả</li>
+                                            <li><strong>adequately addressed</strong> (v): được giải quyết thỏa đáng</li>
+                                            <li><strong>struggle to understand</strong> (v): chật vật/gặp khó khăn để hiểu bài</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_13" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_13" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+
+                            <!-- Q14 -->
+                            <div class="mb-8 pl-4 border-l-2 border-gray-200">
+                                <h4 class="font-bold text-gray-800 mb-2">14. Negative peer influence</h4>
+                                <p class="text-sm text-gray-700 mb-3 leading-relaxed"><strong>Câu hỏi dẫn dắt:</strong> Do số lượng học sinh đông, giáo viên khó kiểm soát hết lớp học, điều này dẫn đến việc học sinh dễ tiếp xúc với những hành vi và thái độ gì từ bạn bè? Do đang ở độ tuổi dễ bị ảnh hưởng, các em có nguy cơ cao gặp phải vấn đề gì?</p>
+                                
+                                <div class="mb-3">
+                                    <input type="checkbox" id="hint-q14" class="hint-toggle hidden">
+                                    <label for="hint-q14" class="text-xs font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded cursor-pointer hover:bg-amber-100 transition"><i class="fas fa-lightbulb mr-1"></i> Hiện Vocab Hint</label>
+                                    <div class="hint-content">
+                                        <ul class="list-disc pl-4 space-y-1">
+                                            <li><strong>negative peer influence</strong> (n): sự ảnh hưởng tiêu cực từ bạn bè đồng trang lứa</li>
+                                            <li><strong>disruptive behaviors</strong> (n): những hành vi gây rối</li>
+                                            <li><strong>impressionable age</strong> (n): độ tuổi dễ bị ảnh hưởng</li>
+                                            <li><strong>adopt such behaviours easily</strong> (v): dễ dàng nhiễm/tiếp thu những hành vi đó</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div id="toolbar_p4_14" class="hidden toolbar mb-2 bg-gray-100 border border-gray-300 rounded p-1 flex space-x-1 w-fit">
+                                    <button type="button" onclick="formatDoc('bold')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 font-bold hover:bg-gray-200"><i class="fas fa-bold"></i></button>
+                                    <button type="button" onclick="formatDoc('strikeThrough')" class="w-8 h-8 rounded flex items-center justify-center text-gray-700 hover:bg-gray-200"><i class="fas fa-strikethrough"></i></button>
+                                    <button type="button" onclick="formatDoc('foreColor', 'red')" class="w-8 h-8 rounded flex items-center justify-center text-red-600 hover:bg-red-50"><i class="fas fa-palette"></i></button>
+                                    <button type="button" onclick="formatDoc('hiliteColor', 'yellow')" class="w-8 h-8 rounded flex items-center justify-center text-yellow-600 hover:bg-yellow-50"><i class="fas fa-highlighter"></i></button>
+                                    <div class="w-px h-5 bg-gray-300 my-auto mx-1"></div>
+                                    <button type="button" onclick="addTeacherNote()" class="px-2 h-8 rounded flex items-center justify-center text-blue-600 text-sm font-semibold hover:bg-blue-50"><i class="fas fa-comment-medical mr-1"></i> Note</button>
+                                </div>
+                                <div id="editor_p4_14" class="feedback-editor" contenteditable="true" placeholder="Viết đoạn văn của bạn vào đây..."></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Submit Area -->
+                    <div class="mt-10 pt-6 border-t border-gray-200 flex justify-between items-center" id="student-submit-area">
+                        <button type="button" onclick="nextPage('page-4', 'page-3')" class="text-gray-500 hover:text-gray-800 font-semibold py-2 px-4 transition"><i class="fas fa-arrow-left mr-2"></i> Quay lại</button>
+                        <button type="button" onclick="submitQuiz()" id="submit-btn" class="bg-amber-600 hover:bg-amber-700 text-white text-lg font-bold py-3 px-10 rounded-full shadow-lg transition-transform hover:scale-105">
+                            <i class="fas fa-paper-plane mr-2"></i> Nộp Bài & Lấy Link
+                        </button>
+                    </div>
+
+                    <!-- Teacher Submit Area -->
+                    <div class="mt-10 pt-6 border-t border-gray-200 flex justify-end items-center hidden" id="teacher-submit-area">
+                        <button type="button" onclick="generateTeacherShareLink()" class="bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold py-3 px-10 rounded-full shadow-lg transition-transform hover:scale-105">
+                            <i class="fas fa-check-double mr-2"></i> Hoàn tất chấm & Trả bài
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-12 text-center text-sm text-gray-400 pb-8">
+        Created by Uyen Nguyen
+    </footer>
+
+    <script>
+        // CONFIGURATION
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwXrBCWO8sA-digWz-bVotLI2dti2TNuxhf29tIJ-V1tFT1nCURKBli2ln_HKHKGGci/exec"; 
+        const QUIZ_ID = "Child_Development_Quiz";
+
+        // PAGE NAVIGATION
+        function nextPage(currentId, nextId) {
+            document.getElementById(currentId).classList.remove('active');
+            document.getElementById(nextId).classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- DRAG & DROP ENGINE ---
+        function allowDrop(ev) { ev.preventDefault(); }
+        function dragEnter(ev) {
+            ev.preventDefault();
+            if (ev.target.classList.contains('droppable-area') || ev.target.classList.contains('match-drop-zone')) {
+                ev.target.classList.add('drag-over');
+            }
+        }
+        function dragLeave(ev) {
+            if (ev.target.classList.contains('droppable-area') || ev.target.classList.contains('match-drop-zone')) {
+                ev.target.classList.remove('drag-over');
+            }
+        }
+        function drag(ev) { ev.dataTransfer.setData("text", ev.target.id); }
+
+        function drop(ev) {
+            ev.preventDefault();
+            let target = ev.target;
+            target.classList.remove('drag-over');
+            
+            const dataId = ev.dataTransfer.getData("text");
+            const draggedElement = document.getElementById(dataId);
+            if(!draggedElement || draggedElement.classList.contains('match-item')) return;
+
+            // Strict pool checking
+            const draggedPool = draggedElement.getAttribute('data-pool');
+            let targetPoolId = draggedPool === 'gapfill-a' ? 'wrap-vocab-a' : 'wrap-vocab-b';
+
+            // 1. Drop on empty or occupied drop zone
+            if (target.classList.contains('droppable-area')) {
+                const dropZoneExpectedPool = target.getAttribute('data-pool');
+                if(draggedPool !== dropZoneExpectedPool) return; // Prevent A->B mixing
+
+                if (target.children.length > 0) {
+                    const existingItem = target.children[0];
+                    const existingPoolId = existingItem.getAttribute('data-pool') === 'gapfill-a' ? 'wrap-vocab-a' : 'wrap-vocab-b';
+                    document.getElementById(existingPoolId).appendChild(existingItem);
+                } else {
+                    target.innerHTML = ''; 
+                }
+                target.appendChild(draggedElement);
+            } 
+            // 2. Drop on another item already in a drop zone
+            else if (target.classList.contains('draggable-item') && target.parentElement.classList.contains('droppable-area')) {
+                let dropZone = target.parentElement;
+                if(draggedPool !== dropZone.getAttribute('data-pool')) return;
+                
+                const existingPoolId = target.getAttribute('data-pool') === 'gapfill-a' ? 'wrap-vocab-a' : 'wrap-vocab-b';
+                document.getElementById(existingPoolId).appendChild(target);
+                dropZone.appendChild(draggedElement);
+            }
+            // 3. Drop back to Sticky Pool
+            else if (target.closest('.sticky-pool')) {
+                document.getElementById(targetPoolId).appendChild(draggedElement);
+            }
+        }
+
+        // Logic for Matching (Part 1)
+        function dropMatch(ev) {
+            ev.preventDefault();
+            let target = ev.target;
+            target.classList.remove('drag-over');
+            const dataId = ev.dataTransfer.getData("text");
+            const draggedElement = document.getElementById(dataId);
+            if(!draggedElement || !draggedElement.classList.contains('match-item')) return;
+
+            if(!target.classList.contains('match-drop-zone') && target.parentElement.classList.contains('match-drop-zone')){
+                target = target.parentElement;
+            }
+            if (target.classList.contains('match-drop-zone')) {
+                const existingItem = Array.from(target.children).find(c => c.classList.contains('match-item'));
+                if (existingItem) document.getElementById('pool-match').appendChild(existingItem);
+                target.appendChild(draggedElement);
+            }
+            else if (target.id === 'pool-match' || target.closest('#pool-match')) {
+                document.getElementById('pool-match').appendChild(draggedElement);
+            }
+        }
+
+        // --- SUBMIT AND GRADE ---
+        function submitQuiz() {
+            const studentNameInput = document.getElementById('student-name');
+            const studentName = studentNameInput.value.trim();
+            if (!studentName) {
+                alert("Bạn bắt buộc phải nhập Họ và Tên ở khung thông tin trên đầu trang để nộp bài.");
+                studentNameInput.focus();
+                studentNameInput.parentElement.classList.add('ring-2', 'ring-red-400');
+                setTimeout(() => studentNameInput.parentElement.classList.remove('ring-2', 'ring-red-400'), 2000);
+                return;
+            }
+            if(!confirm("Bạn đã chắc chắn muốn nộp bài? Hệ thống sẽ tạo link gửi cho Giáo viên.")) return;
+
+            let totalScore = 0;
+            const maxScore = 39; // 5 (MCQ) + 5 (Match) + 10 (GapA) + 10 (TypeA) + 3 (GapB) + 6 (LinkB)
+
+            // Gather & Auto-Grade P1 (MCQ)
+            const p1Answers = [];
+            document.querySelectorAll('.mcq-question').forEach(q => {
+                const checked = q.querySelector('input[type="radio"]:checked');
+                const expected = q.getAttribute('data-ans');
+                p1Answers.push(checked ? checked.value : "");
+                if (checked && checked.value === expected) { totalScore++; q.classList.add('border-green-400', 'bg-green-50'); }
+                else if (checked) { q.classList.add('border-red-400', 'bg-red-50'); }
+            });
+
+            // Gather & Auto-Grade P1 (Match)
+            const p1Match = [];
+            document.querySelectorAll('.match-drop-zone').forEach(zone => {
+                const child = zone.querySelector('.match-item');
+                const expected = zone.getAttribute('data-expected');
+                const val = child ? child.getAttribute('data-val') : "";
+                p1Match.push(val);
+                if (val === expected) { totalScore++; zone.classList.add('correct-ans'); }
+                else if (val) { zone.classList.add('wrong-ans'); }
+            });
+
+            // Gather & Auto-Grade P2 (All Gap Words + Links)
+            const p2Words = [];
+            document.querySelectorAll('#gapfill-container .droppable-area, #para-container .droppable-area').forEach(zone => {
+                const child = zone.querySelector('.draggable-item');
+                const expected = zone.getAttribute('data-expected');
+                const val = child ? child.getAttribute('data-val') : "";
+                p2Words.push(val);
+                if (val === expected) { totalScore++; zone.classList.add('correct-ans'); }
+                else if (val) { zone.classList.add('wrong-ans'); }
+            });
+
+            // Gather & Auto-Grade P2 (Dropdown Types - only in 2A)
+            const p2Types = [];
+            document.querySelectorAll('#gapfill-container .type-select').forEach(sel => {
+                const expected = sel.getAttribute('data-expected');
+                const val = sel.value;
+                p2Types.push(val);
+                if (val === expected) { totalScore++; sel.classList.add('correct-ans', 'font-bold'); }
+                else if (val) { sel.classList.add('wrong-ans'); }
+            });
+
+            // Gather P3/P4 (Essays - 9 blocks total)
+            const p4Answers = [];
+            document.querySelectorAll('.feedback-editor').forEach(ed => p4Answers.push(ed.innerHTML));
+
+            // Create Payload
+            const payload = {
+                quizId: QUIZ_ID,
+                name: studentName,
+                score: `${totalScore}/${maxScore}`,
+                p1_mcq: p1Answers,
+                p1_match: p1Match,
+                p2w: p2Words,
+                p2t: p2Types,
+                p4: p4Answers
+            };
+
+            const encodedData = btoa(encodeURIComponent(JSON.stringify(payload)));
+            const resultUrl = new URL(window.location.href.split('?')[0]);
+            resultUrl.searchParams.set('mode', 'feedback');
+            resultUrl.searchParams.set('data', encodedData);
+            const finalLink = resultUrl.toString();
+
+            // Send to Google Sheets if App Script URL is set
+            if (APPS_SCRIPT_URL !== "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
+                const sheetPayload = {
+                    quizId: QUIZ_ID,
+                    studentName: studentName,
+                    score: `${totalScore}/${maxScore}`,
+                    resultLink: finalLink,
+                    rawAnswers: JSON.stringify(payload)
+                };
+                
+                const btn = document.getElementById('submit-btn');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i> Đang lưu dữ liệu...`;
+                btn.disabled = true;
+
+                fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(sheetPayload)
+                }).then(() => {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    showBanner(finalLink, `${totalScore}/${maxScore}`);
+                }).catch(error => {
+                    console.error('Error:', error);
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    showBanner(finalLink, `${totalScore}/${maxScore}`);
+                });
+            } else {
+                showBanner(finalLink, `${totalScore}/${maxScore}`);
+            }
+        }
+
+        function showBanner(link, score) {
+            document.getElementById('share-link').value = link;
+            document.getElementById('banner-score').innerText = score;
+            document.getElementById('submit-banner').classList.add('show');
+            document.getElementById('student-submit-area').style.display = 'none';
+
+            // Lock UI
+            document.getElementById('student-name').readOnly = true;
+            document.querySelectorAll('input[type="radio"], select, input[type="checkbox"]').forEach(el => el.disabled = true);
+            document.querySelectorAll('.draggable-item, .match-item').forEach(el => el.setAttribute('draggable', 'false'));
+            document.querySelectorAll('.feedback-editor').forEach(el => el.setAttribute('contenteditable', 'false'));
+        }
+
+        // --- TEACHER SUBMIT ---
+        function generateTeacherShareLink() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const dataStr = urlParams.get('data');
+            if(!dataStr) return;
+
+            let payload = JSON.parse(decodeURIComponent(atob(dataStr)));
+            payload.p4 = []; // Reset P4 to store teacher edits
+            document.querySelectorAll('.feedback-editor').forEach(ed => payload.p4.push(ed.innerHTML));
+
+            const encodedData = btoa(encodeURIComponent(JSON.stringify(payload)));
+            const url = new URL(window.location.href.split('?')[0]);
+            url.searchParams.set('mode', 'view_feedback');
+            url.searchParams.set('data', encodedData);
+
+            document.getElementById('share-link').value = url.toString();
+            document.getElementById('banner-title').innerText = "Đã lưu lời phê!";
+            document.getElementById('banner-subtitle').innerText = "Copy link và gửi lại cho học sinh để xem kết quả.";
+            document.getElementById('submit-banner').classList.replace('bg-amber-500', 'bg-blue-600');
+            document.getElementById('submit-banner').classList.add('show');
+            document.getElementById('teacher-submit-area').style.display = 'none';
+        }
+
+        function copyLink() {
+            const linkInput = document.getElementById('share-link');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999);
+            try {
+                document.execCommand('copy');
+                const btn = document.getElementById('copy-btn');
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = `<i class="fas fa-check"></i> <span>Đã Copy!</span>`;
+                btn.classList.add('bg-gray-100', 'text-gray-800');
+                setTimeout(() => { btn.innerHTML = originalHtml; btn.classList.remove('bg-gray-100', 'text-gray-800'); }, 2000);
+            } catch (err) { alert("Không thể copy tự động."); }
+        }
+
+        // --- LOAD URL PARAMS (FEEDBACK MODE) ---
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+            const dataStr = urlParams.get('data');
+
+            if (!mode || !dataStr) return;
+            
+            try {
+                const payload = JSON.parse(decodeURIComponent(atob(dataStr)));
+                
+                // Hide input, show Teacher panel
+                document.getElementById('name-input-section').classList.add('hidden');
+                document.getElementById('student-submit-area').classList.add('hidden');
+                document.getElementById('teacher-info-panel').classList.remove('hidden');
+                document.getElementById('display-student-name').innerText = payload.name || "Ẩn danh";
+
+                // Reconstruct P1 (MCQ)
+                document.querySelectorAll('.mcq-question').forEach((q, i) => {
+                    const expected = q.getAttribute('data-ans');
+                    const studentVal = payload.p1_mcq[i];
+                    q.querySelectorAll('input[type="radio"]').forEach(r => {
+                        r.disabled = true;
+                        if (r.value === studentVal) r.checked = true;
+                    });
+                    if (studentVal === expected) {
+                        q.querySelector(`input[value="${studentVal}"]`).parentElement.classList.add('bg-green-100');
+                    } else {
+                        if (studentVal) q.querySelector(`input[value="${studentVal}"]`).parentElement.classList.add('bg-red-100');
+                        q.querySelector(`input[value="${expected}"]`).parentElement.classList.add('bg-green-100', 'border', 'border-green-400');
+                    }
+                });
+
+                // Reconstruct P1 (Match)
+                document.querySelectorAll('.match-drop-zone').forEach((zone, i) => {
+                    const expected = zone.getAttribute('data-expected');
+                    const studentVal = payload.p1_match[i];
+                    if (studentVal) {
+                        const poolItem = document.querySelector(`.match-item[data-val="${studentVal}"]`);
+                        zone.innerHTML = `<div class="match-item cursor-default pointer-events-none">${poolItem.innerText}</div>`;
+                    }
+                    if (studentVal === expected) zone.classList.add('correct-ans');
+                    else {
+                        zone.classList.add('wrong-ans');
+                        const hint = document.createElement('div');
+                        hint.className = "text-xs text-red-600 mt-1 font-bold w-full";
+                        const expItem = document.querySelector(`.match-item[data-val="${expected}"]`);
+                        hint.innerText = `Đúng: ${expItem ? expItem.innerText : expected}`;
+                        zone.parentElement.appendChild(hint);
+                    }
+                });
+
+                // Reconstruct P2 (Words - both 2A and 2B)
+                document.querySelectorAll('#gapfill-container .droppable-area, #para-container .droppable-area').forEach((zone, i) => {
+                    const expected = zone.getAttribute('data-expected');
+                    const studentVal = payload.p2w[i];
+                    if (studentVal) {
+                        const isLink = ['First_and_foremost', 'The_underlying_reason_is', 'Consequently', 'As_a_result', 'furthermore', 'Ultimately'].includes(studentVal);
+                        const txt = studentVal.replace(/_/g, ' ');
+                        zone.innerHTML = `<div class="draggable-item cursor-default pointer-events-none ${isLink ? 'linking-word' : ''}">${txt}</div>`;
+                    }
+                    if (studentVal === expected) zone.classList.add('correct-ans');
+                    else {
+                        zone.classList.add('wrong-ans');
+                        const tt = document.createElement('span');
+                        tt.innerHTML = `<br><span class="text-xs text-red-600 font-bold whitespace-nowrap">Đúng: ${expected.replace(/_/g, ' ')}</span>`;
+                        zone.parentElement.appendChild(tt);
+                    }
+                });
+
+                // Reconstruct P2 (Types - 2A)
+                document.querySelectorAll('#gapfill-container .type-select').forEach((sel, i) => {
+                    const expected = sel.getAttribute('data-expected');
+                    const studentVal = payload.p2t[i];
+                    sel.value = studentVal || "";
+                    sel.disabled = true;
+                    if (studentVal === expected) sel.classList.add('correct-ans', 'font-bold');
+                    else {
+                        sel.classList.add('wrong-ans');
+                        const txt = document.createElement('span');
+                        txt.className = "text-xs text-red-600 font-bold ml-2";
+                        txt.innerText = `(Đúng: ${expected})`;
+                        sel.parentElement.appendChild(txt);
+                    }
+                });
+
+                // Hide pools
+                document.getElementById('pool-vocab-a').style.display = 'none';
+                document.getElementById('pool-vocab-b').style.display = 'none';
+                document.getElementById('pool-match').parentElement.style.display = 'none';
+
+                // Setup P3/P4 Content
+                payload.p4.forEach((content, i) => {
+                    // Cần map đúng index với id editor (P3/P4)
+                    let editorId = `editor_p3_${i+1}`;
+                    if(i >= 6) editorId = `editor_p4_${i+1}`;
+                    
+                    const editor = document.getElementById(editorId);
+                    if(editor){
+                        if(!content || content.trim() === '') {
+                            editor.innerHTML = '<span style="color:#ef4444; font-style:italic;">(Học sinh không làm câu này)</span>';
+                        } else {
+                            editor.innerHTML = content;
+                        }
+                    }
+                });
+
+                // Show all pages for grading
+                document.querySelectorAll('.page-section').forEach(s => s.style.display = 'block');
+                document.querySelectorAll('button[onclick^="nextPage"]').forEach(btn => btn.style.display = 'none');
+
+                if (mode === 'feedback') {
+                    // Teacher mode
+                    document.getElementById('teacher-submit-area').classList.remove('hidden');
+                    document.querySelectorAll('.toolbar').forEach(tb => tb.classList.remove('hidden'));
+                } else if (mode === 'view_feedback') {
+                    // Student view mode
+                    document.querySelector('#teacher-info-panel .bg-yellow-50').innerHTML = '<strong><i class="fas fa-check-circle"></i> BÀI ĐÃ ĐƯỢC CHẤM</strong><br>Dưới đây là kết quả và lời phê của Giáo viên. Click vào các chỗ bôi đậm màu xanh (nếu có) ở Phần 3 và 4 để xem Note.';
+                    document.querySelector('#teacher-info-panel .bg-yellow-50').classList.replace('bg-yellow-50', 'bg-green-50');
+                    document.querySelector('#teacher-info-panel .border-yellow-200').classList.replace('border-yellow-200', 'border-green-200');
+                    document.querySelector('#teacher-info-panel .text-yellow-800').classList.replace('text-yellow-800', 'text-green-800');
+                    document.querySelectorAll('.feedback-editor').forEach(ed => ed.setAttribute('contenteditable', 'false'));
+                }
+            } catch (e) {
+                alert("Đường link bài làm bị lỗi hoặc không hợp lệ.");
+                console.error(e);
+            }
+        }
+
+        // --- TEACHER TOOLS ---
+        function formatDoc(cmd, value=null) { document.execCommand(cmd, false, value); }
+
+        document.addEventListener('mouseover', function(event) {
+            const noteEl = event.target.closest('.teacher-note-highlight');
+            if (noteEl) {
+                const safeNote = noteEl.getAttribute('data-note');
+                const tooltip = document.getElementById('floating-note-tooltip');
+                document.getElementById('floating-note-content').innerText = safeNote;
+                tooltip.classList.remove('hidden');
+                
+                const rect = noteEl.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+                
+                let topPos = rect.top + scrollTop - tooltipRect.height - 12;
+                let leftPos = rect.left + scrollLeft + (rect.width / 2) - (tooltipRect.width / 2);
+                
+                if (topPos < scrollTop) {
+                    topPos = rect.bottom + scrollTop + 12;
+                    document.getElementById('tooltip-arrow').className = "absolute -top-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-t border-l border-blue-200 rotate-45";
+                } else {
+                    document.getElementById('tooltip-arrow').className = "absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white border-b border-r border-blue-200 rotate-45";
+                }
+                tooltip.style.top = topPos + 'px'; tooltip.style.left = leftPos + 'px';
+            }
+        });
+
+        document.addEventListener('mouseout', function(event) {
+            const noteEl = event.target.closest('.teacher-note-highlight');
+            const tooltip = document.getElementById('floating-note-tooltip');
+            if (noteEl) {
+                setTimeout(() => { if (!tooltip.matches(':hover')) tooltip.classList.add('hidden'); }, 100);
+            }
+        });
+        
+        document.getElementById('floating-note-tooltip').addEventListener('mouseleave', function() {
+            this.classList.add('hidden');
+        });
+
+        function addTeacherNote() {
+            const note = prompt("Nhập lời phê/ghi chú:");
+            if (note) {
+                const safeNote = note.replace(/'/g, "&apos;").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0 && selection.toString().length > 0) {
+                    const selectedText = selection.toString();
+                    const html = `<span class="teacher-note-highlight" style="background-color: #dbeafe; border-bottom: 2px solid #3b82f6; cursor: help; padding: 0 4px; border-radius: 3px; font-weight: 500; color: #1e3a8a; transition: all 0.2s;" data-note="${safeNote}">${selectedText} <i class="fas fa-comment-dots text-xs text-blue-500"></i></span>`;
+                    document.execCommand('insertHTML', false, html);
+                } else {
+                    const html = ` <span class="teacher-note-highlight" style="background-color: #dbeafe; color: #1e3a8a; padding: 2px 6px; border-radius: 4px; cursor: help; border: 1px solid #60a5fa; display: inline-flex; align-items: center; gap: 4px;" data-note="${safeNote}"><i class="fas fa-comment-dots text-blue-500"></i> Ghi chú</span> `;
+                    document.execCommand('insertHTML', false, html);
+                }
+            }
+        }
+
+        window.onload = checkUrlParams;
+    </script>
+</body>
+</html>
